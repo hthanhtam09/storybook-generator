@@ -58,6 +58,7 @@ export interface BookMetadata {
   introduction: string;
   howToUse: string;
   conclusion: string;
+  fullPageImage?: File;
 }
 
 export interface TemplateFile {

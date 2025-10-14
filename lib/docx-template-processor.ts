@@ -10,6 +10,8 @@ import {
   convertInchesToTwip,
   LineRuleType,
   TableOfContents,
+  Footer,
+  PageNumber,
 } from "docx";
 import type { Story, BookMetadata, ImageFile, TemplateFile } from "./types";
 import { parseDocxStyles, resolveDefaults } from "./docx-style-reader";
@@ -409,10 +411,46 @@ async function generateDocumentFromTemplate(
     // Fallback to internal defaults on any parsing issue
     console.error("Failed to apply template styles, using defaults", e);
   }
-  const sections: (Paragraph | TableOfContents)[] = [];
+  const prefaceChildren: (Paragraph | TableOfContents)[] = [];
+  const contentChildren: (Paragraph | TableOfContents)[] = [];
+
+  // Full page image if provided (placed at the very beginning)
+  if (metadata.fullPageImage) {
+    try {
+      const imageBuffer = await metadata.fullPageImage.arrayBuffer();
+      // Reserve approximately one text line for the following PageBreak
+      // Page content area: 6x9 inches page with 0.75" margins => 4.5" x 7.5"
+      // One single-spaced line ~ 240 twips => 240/1440 inch ≈ 0.1667"
+      const contentWidthInches = 6 - 0.75 * 2; // 4.5"
+      const contentHeightInches = 9 - 0.75 * 2; // 7.5"
+      const oneLineInches = 240 / 1440; // ≈ 0.1667"
+      const reservedHeightInches = Math.max(
+        0,
+        contentHeightInches - oneLineInches
+      ); // ~7.33"
+      prefaceChildren.push(
+        createParagraph({
+          children: [
+            new ImageRun({
+              data: imageBuffer as any,
+              transformation: {
+                width: Math.round(96 * contentWidthInches), // Content width (page width - margins)
+                height: Math.round(96 * reservedHeightInches), // Leave ~1 text line for PageBreak
+              },
+            } as any),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 0, after: 0 },
+        }),
+        createParagraph({ children: [new PageBreak()] })
+      );
+    } catch (error) {
+      console.error("Failed to add full page image:", error);
+    }
+  }
 
   // Copyright page
-  sections.push(
+  prefaceChildren.push(
     createParagraph({ text: "", spacing: { after: SPACING.EXTRA_LARGE } }),
     createCenteredParagraph(
       `Copyright ${metadata.copyrightYear} by ${metadata.publisher}`,
@@ -448,7 +486,7 @@ async function generateDocumentFromTemplate(
   );
 
   // Table of Contents
-  sections.push(
+  prefaceChildren.push(
     createParagraph({
       children: [
         createTextRun({
@@ -466,7 +504,7 @@ async function generateDocumentFromTemplate(
   );
 
   // Introduction section
-  sections.push(
+  contentChildren.push(
     createParagraph({
       children: [
         createTextRun({
@@ -494,7 +532,7 @@ async function generateDocumentFromTemplate(
   );
 
   // How to Use This Book section
-  sections.push(
+  contentChildren.push(
     createParagraph({
       children: [
         createTextRun({
@@ -524,7 +562,7 @@ async function generateDocumentFromTemplate(
   // Stories section
   for (const story of stories) {
     // Story header
-    sections.push(
+    contentChildren.push(
       ...buildStoryHeader(story, defaultHeading2Size, defaultFontFamily)
     );
 
@@ -533,7 +571,7 @@ async function generateDocumentFromTemplate(
     if (image) {
       try {
         const imageBuffer = await image.file.arrayBuffer();
-        sections.push(
+        contentChildren.push(
           createParagraph({
             children: [
               new ImageRun({
@@ -554,7 +592,7 @@ async function generateDocumentFromTemplate(
     }
 
     // Story vocabulary
-    sections.push(
+    contentChildren.push(
       ...buildStoryVocabulary(
         story,
         defaultBodySizeHalfPoints,
@@ -564,7 +602,7 @@ async function generateDocumentFromTemplate(
     );
 
     // Story text (original and translated)
-    sections.push(
+    contentChildren.push(
       ...buildStoryText(
         story,
         28,
@@ -575,7 +613,7 @@ async function generateDocumentFromTemplate(
     );
 
     // Story questions
-    sections.push(
+    contentChildren.push(
       ...buildStoryQuestions(
         story,
         defaultHeading2Size,
@@ -587,7 +625,7 @@ async function generateDocumentFromTemplate(
   }
 
   // Answers section
-  sections.push(
+  contentChildren.push(
     createParagraph({
       children: [
         createTextRun({
@@ -605,7 +643,7 @@ async function generateDocumentFromTemplate(
 
   stories.forEach((story, index) => {
     const answerString = story.answers.join(" - ");
-    sections.push(
+    contentChildren.push(
       createParagraph({
         children: [
           createTextRun({
@@ -635,10 +673,10 @@ async function generateDocumentFromTemplate(
     );
   });
 
-  sections.push(createParagraph({ children: [new PageBreak()] }));
+  contentChildren.push(createParagraph({ children: [new PageBreak()] }));
 
   // Conclusion section
-  sections.push(
+  contentChildren.push(
     createParagraph({
       children: [
         createTextRun({
@@ -664,8 +702,23 @@ async function generateDocumentFromTemplate(
     )
   );
 
+  // Footer with centered page number for content section
+  const contentFooter = new Footer({
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            children: [PageNumber.CURRENT],
+          }),
+        ],
+      }),
+    ],
+  });
+
   return new Document({
     sections: [
+      // Preface section: no numbering
       {
         properties: {
           page: {
@@ -681,7 +734,31 @@ async function generateDocumentFromTemplate(
             },
           },
         },
-        children: sections,
+        children: prefaceChildren,
+      },
+      // Content section: numbering starts at 1 in footer
+      {
+        properties: {
+          page: {
+            size: {
+              width: convertInchesToTwip(6),
+              height: convertInchesToTwip(9),
+            },
+            margin: {
+              top: convertInchesToTwip(0.75),
+              bottom: convertInchesToTwip(0.75),
+              left: convertInchesToTwip(0.75),
+              right: convertInchesToTwip(0.75),
+            },
+            pageNumbers: {
+              start: 1,
+            },
+          },
+        },
+        children: contentChildren,
+        footers: {
+          default: contentFooter,
+        },
       },
     ],
   });
