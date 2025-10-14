@@ -9,6 +9,7 @@ import {
   HeadingLevel,
   convertInchesToTwip,
   LineRuleType,
+  TableOfContents,
 } from "docx";
 import type { Story, BookMetadata, ImageFile, TemplateFile } from "./types";
 import { parseDocxStyles, resolveDefaults } from "./docx-style-reader";
@@ -154,7 +155,14 @@ function buildStoryHeader(
       heading: HeadingLevel.TITLE,
     }),
     createParagraph({
-      children: [createTextRun({ text: story.titleOriginal })],
+      children: [
+        createTextRun({
+          text: story.titleOriginal,
+          size: defaultHeading2Size,
+          font: defaultFontFamily,
+          bold: true,
+        }),
+      ],
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
       spacing: { after: SPACING.LARGE },
@@ -185,13 +193,18 @@ function buildStoryVocabulary(
     createParagraph({
       children: [new PageBreak()],
     }),
-    createLeftParagraph(
-      "Vocabulary",
-      28, // 14px = 28 half-points
-      defaultFontFamily,
-      defaultParagraphAfterTwips,
-      true
-    ),
+    createParagraph({
+      children: [
+        createTextRun({
+          text: "Vocabulary",
+          size: 28, // 14px = 28 half-points
+          font: defaultFontFamily,
+          bold: true,
+        }),
+      ],
+      alignment: AlignmentType.LEFT,
+      spacing: { after: defaultParagraphAfterTwips },
+    }),
   ];
 
   story.vocabulary.forEach((word, index) => {
@@ -289,15 +302,18 @@ function buildStoryQuestions(
   defaultParagraphAfterTwips: number
 ): Paragraph[] {
   const paragraphs: Paragraph[] = [
-    createLeftParagraph(
-      "Comprehension Questions",
-      defaultHeading2Size,
-      defaultFontFamily,
-      defaultParagraphAfterTwips,
-      true,
-      LINE_HEIGHT.TRIPLE,
-      LineRuleType.EXACT
-    ),
+    createParagraph({
+      children: [
+        createTextRun({
+          text: "Comprehension Questions",
+          size: defaultHeading2Size,
+          font: defaultFontFamily,
+          bold: true,
+        }),
+      ],
+      alignment: AlignmentType.LEFT,
+      spacing: { after: defaultParagraphAfterTwips },
+    }),
   ];
 
   story.questions.forEach((question) => {
@@ -393,7 +409,7 @@ async function generateDocumentFromTemplate(
     // Fallback to internal defaults on any parsing issue
     console.error("Failed to apply template styles, using defaults", e);
   }
-  const sections: Paragraph[] = [];
+  const sections: (Paragraph | TableOfContents)[] = [];
 
   // Copyright page
   sections.push(
@@ -434,12 +450,18 @@ async function generateDocumentFromTemplate(
   // Table of Contents
   sections.push(
     createParagraph({
-      children: [createTextRun({ text: "Table of Contents" })],
+      children: [
+        createTextRun({
+          text: "Table of Contents",
+          size: defaultHeading2Size,
+          font: defaultFontFamily,
+          bold: true,
+        }),
+      ],
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
       spacing: { after: SPACING.LARGE },
     }),
-
     createParagraph({ children: [new PageBreak()] })
   );
 
@@ -449,6 +471,9 @@ async function generateDocumentFromTemplate(
       children: [
         createTextRun({
           text: "Introduction",
+          size: defaultHeading2Size,
+          font: defaultFontFamily,
+          bold: true,
         }),
       ],
       heading: HeadingLevel.HEADING_1,
@@ -474,6 +499,9 @@ async function generateDocumentFromTemplate(
       children: [
         createTextRun({
           text: "How to Use This Book",
+          size: defaultHeading2Size,
+          font: defaultFontFamily,
+          bold: true,
         }),
       ],
       heading: HeadingLevel.HEADING_1,
@@ -560,24 +588,50 @@ async function generateDocumentFromTemplate(
 
   // Answers section
   sections.push(
-    createLeftParagraph(
-      "Answers",
-      defaultHeading2Size,
-      defaultFontFamily,
-      defaultParagraphAfterTwips * 2,
-      true
-    )
+    createParagraph({
+      children: [
+        createTextRun({
+          text: "Answers",
+          size: defaultHeading2Size,
+          font: defaultFontFamily,
+          bold: true,
+        }),
+      ],
+      heading: HeadingLevel.HEADING_1,
+      alignment: AlignmentType.CENTER,
+      spacing: { after: SPACING.LARGE },
+    })
   );
 
-  stories.forEach((story) => {
+  stories.forEach((story, index) => {
     const answerString = story.answers.join(" - ");
     sections.push(
-      createLeftParagraph(
-        `${story.titleOriginal}: ${answerString}`,
-        defaultBodySizeHalfPoints,
-        defaultFontFamily,
-        Math.max(SPACING.SMALL, defaultParagraphAfterTwips - 20)
-      )
+      createParagraph({
+        children: [
+          createTextRun({
+            text: `${index + 1}. `,
+            size: defaultBodySizeHalfPoints,
+            font: defaultFontFamily,
+            bold: false,
+          }),
+          createTextRun({
+            text: story.titleOriginal,
+            size: defaultBodySizeHalfPoints,
+            font: defaultFontFamily,
+            bold: true,
+          }),
+          createTextRun({
+            text: `: ${answerString}`,
+            size: defaultBodySizeHalfPoints,
+            font: defaultFontFamily,
+            bold: false,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: {
+          after: Math.max(SPACING.SMALL, defaultParagraphAfterTwips - 20),
+        },
+      })
     );
   });
 
@@ -585,13 +639,19 @@ async function generateDocumentFromTemplate(
 
   // Conclusion section
   sections.push(
-    createLeftParagraph(
-      "Conclusion",
-      defaultHeading2Size,
-      defaultFontFamily,
-      defaultParagraphAfterTwips * 2,
-      true
-    ),
+    createParagraph({
+      children: [
+        createTextRun({
+          text: "Conclusion",
+          size: defaultHeading2Size,
+          font: defaultFontFamily,
+          bold: true,
+        }),
+      ],
+      heading: HeadingLevel.HEADING_1,
+      alignment: AlignmentType.CENTER,
+      spacing: { after: SPACING.LARGE },
+    }),
     ...metadata.conclusion.split("\n").map((line) =>
       createJustifiedParagraph(
         line,
