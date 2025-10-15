@@ -13,6 +13,7 @@ interface ExportButtonProps {
   images: ImageFile[];
   template: TemplateFile | null;
   disabled?: boolean;
+  onExportSuccess?: () => void;
 }
 
 export function ExportButton({
@@ -21,6 +22,7 @@ export function ExportButton({
   images,
   template,
   disabled,
+  onExportSuccess,
 }: ExportButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -66,6 +68,51 @@ export function ExportButton({
       const filename = `${metadata.title.replace(/[^a-z0-9]/gi, "_")}_${
         metadata.language
       }_${new Date().toISOString().split("T")[0]}.docx`;
+
+      // Create a File object from the blob
+      const file = new File([blob], filename, {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+      // Prepare metadata for serialization
+      const serializableMetadata = {
+        ...metadata,
+        fullPageImage: metadata.fullPageImage, // Keep File object for server processing
+      };
+
+      // Save to database
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("metadata", JSON.stringify(serializableMetadata));
+      formData.append("storiesCount", stories.length.toString());
+
+      // If there's a fullPageImage, append it separately
+      if (metadata.fullPageImage) {
+        formData.append("fullPageImage", metadata.fullPageImage);
+      } else {
+        console.log("No fullPageImage to append");
+      }
+
+      const saveResponse = await fetch("/api/documents", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!saveResponse.ok) {
+        const errorText = await saveResponse.text();
+        console.error("Save response error:", {
+          status: saveResponse.status,
+          statusText: saveResponse.statusText,
+          errorText: errorText,
+        });
+        throw new Error(
+          `Failed to save document to database: ${saveResponse.status} ${saveResponse.statusText}`
+        );
+      }
+
+      const saveResult = await saveResponse.json();
+
+      // Also provide immediate download
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -77,8 +124,13 @@ export function ExportButton({
 
       toast({
         title: "Success!",
-        description: "Your document has been generated using the template",
+        description: "Your document has been generated and saved to history",
       });
+
+      // Trigger refresh of history tab
+      if (onExportSuccess) {
+        onExportSuccess();
+      }
     } catch (error) {
       console.error("Failed to generate document:", error);
       toast({

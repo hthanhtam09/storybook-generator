@@ -1,3 +1,5 @@
+import { ObjectId, Binary } from "mongodb";
+
 export interface VocabularyWord {
   word: string;
   ipa: string;
@@ -62,6 +64,19 @@ export interface BookMetadata {
   fullPageImage?: File;
 }
 
+export interface BookMetadataSerializable {
+  title: string;
+  author: string;
+  publisher: string;
+  copyrightYear: number;
+  publicationLocation: string;
+  language: string;
+  introduction: string;
+  howToUse: string;
+  conclusion: string;
+  fullPageImageDataUrl?: string;
+}
+
 export interface TemplateFile {
   filePath: string;
   name: string;
@@ -72,4 +87,16 @@ export interface TemplateParsedStylesSummary {
   defaultFontSizePt?: number;
   defaultParagraphBeforePt?: number;
   defaultParagraphAfterPt?: number;
+}
+
+export interface ExportedDocument {
+  _id?: ObjectId;
+  filename: string;
+  title: string;
+  language: string;
+  author: string;
+  createdAt: Date;
+  fileData: Binary | Buffer;
+  metadata: BookMetadataSerializable;
+  storiesCount: number;
 }

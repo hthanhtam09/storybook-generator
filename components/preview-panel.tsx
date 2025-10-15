@@ -14,6 +14,7 @@ interface PreviewPanelProps {
   metadata: BookMetadata | null;
   images: ImageFile[];
   template: TemplateFile | null;
+  onExportSuccess?: () => void;
 }
 
 export function PreviewPanel({
@@ -21,6 +22,7 @@ export function PreviewPanel({
   metadata,
   images,
   template,
+  onExportSuccess,
 }: PreviewPanelProps) {
   const [zoom, setZoom] = useState(100);
   const [currentPage, setCurrentPage] = useState(0);
@@ -92,6 +94,7 @@ export function PreviewPanel({
               images={images}
               template={template}
               disabled={!canExport}
+              onExportSuccess={onExportSuccess}
             />
           </div>
         </div>

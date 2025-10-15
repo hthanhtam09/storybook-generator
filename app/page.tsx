@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Header } from "@/components/header";
 import { InputPanel } from "@/components/input-panel";
 import { PreviewPanel } from "@/components/preview-panel";
 import { Toaster } from "@/components/ui/toaster";
 import type { Story, BookMetadata, ImageFile, TemplateFile } from "@/lib/types";
+import type { HistoryTabRef } from "@/components/history-tab";
 
 const HARDCODED_TEMPLATE: TemplateFile = {
   filePath: "templates/template-1.docx",
@@ -16,6 +17,14 @@ export default function Home() {
   const [stories, setStories] = useState<Story[]>([]);
   const [metadata, setMetadata] = useState<BookMetadata | null>(null);
   const [images, setImages] = useState<ImageFile[]>([]);
+  const historyTabRef = useRef<HistoryTabRef>(null);
+
+  const handleExportSuccess = () => {
+    // Refresh history tab when export is successful
+    if (historyTabRef.current) {
+      historyTabRef.current.refresh();
+    }
+  };
 
   return (
     <>
@@ -28,6 +37,7 @@ export default function Home() {
               onStoriesChange={setStories}
               onMetadataChange={setMetadata}
               onImagesChange={setImages}
+              historyTabRef={historyTabRef}
             />
           </div>
           <div className="w-1/2">
@@ -36,6 +46,7 @@ export default function Home() {
               metadata={metadata}
               images={images}
               template={HARDCODED_TEMPLATE}
+              onExportSuccess={handleExportSuccess}
             />
           </div>
         </div>
