@@ -96,7 +96,11 @@ export interface ExportedDocument {
   language: string;
   author: string;
   createdAt: Date;
-  fileData: Binary | Buffer;
+  // When the file is small (<= ~16MB), we store inline to keep things simple
+  fileData?: Binary | Buffer;
+  // For files that exceed MongoDB's 16MB BSON limit, we store them in GridFS
+  fileDataId?: ObjectId;
+  fileStorage?: "inline" | "gridfs";
   metadata: BookMetadataSerializable;
   storiesCount: number;
 }

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { Binary } from "mongodb";
+import { Binary, GridFSBucket, ObjectId } from "mongodb";
 import type {
   ExportedDocument,
   BookMetadata,
   BookMetadataSerializable,
 } from "@/lib/types";
+
+// Configure the API route to handle larger body sizes
+export const runtime = "nodejs";
+export const maxDuration = 60; // 60 seconds timeout
 
 // Helper function to convert File to data URL
 async function convertFileToDataUrl(file: File): Promise<string> {
@@ -35,6 +39,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Check file size (50MB limit)
+    const maxFileSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxFileSize) {
+      return NextResponse.json(
+        {
+          error: "File too large",
+          message: `File size (${Math.round(
+            file.size / 1024 / 1024
+          )}MB) exceeds the maximum allowed size of 50MB`,
+        },
+        { status: 413 }
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -51,13 +69,44 @@ export async function POST(request: NextRequest) {
     const db = await getDb();
     const collection = db.collection<ExportedDocument>("documents");
 
+    // If buffer > 16MB, store in GridFS instead of inline BSON
+    const BSON_LIMIT_BYTES = 16 * 1024 * 1024; // 16MB
+    let fileStorage: "inline" | "gridfs" = "inline";
+    let fileData: Binary | undefined = undefined;
+    let fileDataId: ObjectId | undefined = undefined;
+
+    if (buffer.length > BSON_LIMIT_BYTES) {
+      fileStorage = "gridfs";
+      const bucket = new GridFSBucket(db, { bucketName: "documents" });
+      const uploadStream = bucket.openUploadStream(file.name, {
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        metadata: {
+          title: metadata.title,
+          language: metadata.language,
+          author: metadata.author,
+        },
+      });
+      // Write buffer to GridFS
+      await new Promise<void>((resolve, reject) => {
+        uploadStream.end(buffer, (err?: Error | null) => {
+          if (err) return reject(err);
+          return resolve();
+        });
+      });
+      fileDataId = uploadStream.id as ObjectId;
+    } else {
+      fileData = new Binary(buffer);
+    }
+
     const document: Omit<ExportedDocument, "_id"> = {
       filename: file.name,
       title: metadata.title,
       language: metadata.language,
       author: metadata.author,
       createdAt: new Date(),
-      fileData: new Binary(buffer),
+      ...(fileStorage === "inline" ? { fileData } : { fileDataId }),
+      fileStorage,
       metadata: serializableMetadata,
       storiesCount,
     };

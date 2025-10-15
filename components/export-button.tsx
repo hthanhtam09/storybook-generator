@@ -69,6 +69,19 @@ export function ExportButton({
         metadata.language
       }_${new Date().toISOString().split("T")[0]}.docx`;
 
+      // Check file size before proceeding
+      const maxFileSize = 50 * 1024 * 1024; // 50MB
+      if (blob.size > maxFileSize) {
+        toast({
+          title: "File too large",
+          description: `Generated document (${Math.round(
+            blob.size / 1024 / 1024
+          )}MB) exceeds the maximum size of 50MB. Please reduce the number of stories or images.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Create a File object from the blob
       const file = new File([blob], filename, {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -105,6 +118,22 @@ export function ExportButton({
           statusText: saveResponse.statusText,
           errorText: errorText,
         });
+
+        // Handle specific error cases
+        if (saveResponse.status === 413) {
+          try {
+            const errorData = JSON.parse(errorText);
+            throw new Error(
+              errorData.message ||
+                "Document is too large to save. Please reduce the number of stories or images."
+            );
+          } catch {
+            throw new Error(
+              "Document is too large to save. Please reduce the number of stories or images."
+            );
+          }
+        }
+
         throw new Error(
           `Failed to save document to database: ${saveResponse.status} ${saveResponse.statusText}`
         );

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { ObjectId, Binary } from "mongodb";
+import { ObjectId, Binary, GridFSBucket } from "mongodb";
 import type { ExportedDocument } from "@/lib/types";
+
+// Configure the API route
+export const runtime = "nodejs";
+export const maxDuration = 30; // 30 seconds timeout
 
 export async function GET(
   request: NextRequest,
@@ -30,6 +34,30 @@ export async function GET(
     }
 
     // Return the file as a download
+    if (document.fileStorage === "gridfs" && document.fileDataId) {
+      const db = await getDb();
+      const bucket = new GridFSBucket(db, { bucketName: "documents" });
+      const downloadStream = bucket.openDownloadStream(
+        new ObjectId(document.fileDataId)
+      );
+
+      const chunks: Uint8Array[] = [];
+      await new Promise<void>((resolve, reject) => {
+        downloadStream.on("data", (chunk) => chunks.push(chunk));
+        downloadStream.on("error", (err) => reject(err));
+        downloadStream.on("end", () => resolve());
+      });
+
+      const buffer = Buffer.concat(chunks.map((c) => Buffer.from(c)));
+      return new NextResponse(new Uint8Array(buffer), {
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "Content-Disposition": `attachment; filename="${document.filename}"`,
+        },
+      });
+    }
+
     const fileData =
       document.fileData instanceof Binary
         ? document.fileData.buffer
