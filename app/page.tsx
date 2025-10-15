@@ -7,11 +7,15 @@ import { PreviewPanel } from "@/components/preview-panel";
 import { Toaster } from "@/components/ui/toaster";
 import type { Story, BookMetadata, ImageFile, TemplateFile } from "@/lib/types";
 
+const HARDCODED_TEMPLATE: TemplateFile = {
+  filePath: "templates/template-1.docx",
+  name: "template-1.docx",
+};
+
 export default function Home() {
   const [stories, setStories] = useState<Story[]>([]);
   const [metadata, setMetadata] = useState<BookMetadata | null>(null);
   const [images, setImages] = useState<ImageFile[]>([]);
-  const [template, setTemplate] = useState<TemplateFile | null>(null);
 
   return (
     <>
@@ -24,7 +28,6 @@ export default function Home() {
               onStoriesChange={setStories}
               onMetadataChange={setMetadata}
               onImagesChange={setImages}
-              onTemplateChange={setTemplate}
             />
           </div>
           <div className="w-1/2">
@@ -32,7 +35,7 @@ export default function Home() {
               stories={stories}
               metadata={metadata}
               images={images}
-              template={template}
+              template={HARDCODED_TEMPLATE}
             />
           </div>
         </div>

@@ -390,8 +390,8 @@ async function generateDocumentFromTemplate(
   let defaultHeading2Size = 28;
 
   try {
-    if (template?.file) {
-      const parsed = await parseDocxStyles(template.file);
+    if (template?.filePath) {
+      const parsed = await parseDocxStyles(template.filePath);
       const resolved = resolveDefaults(parsed);
       defaultFontFamily = resolved.run?.fontFamily || defaultFontFamily;
 

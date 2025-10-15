@@ -46,8 +46,8 @@ export function ExportButton({
 
     if (!template) {
       toast({
-        title: "Template required",
-        description: "Please upload a DOCX template before exporting.",
+        title: "Template error",
+        description: "Template file not found. Please refresh the page.",
         variant: "destructive",
       });
       return;

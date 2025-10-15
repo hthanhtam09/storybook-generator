@@ -28,6 +28,7 @@ export interface Story {
   questions: Question[];
   answers: string[];
   imageUrl?: string;
+  illustrationPrompt?: string;
 }
 
 export interface ValidationError {
@@ -62,9 +63,8 @@ export interface BookMetadata {
 }
 
 export interface TemplateFile {
-  file: File;
+  filePath: string;
   name: string;
-  uploadedAt: Date;
 }
 
 export interface TemplateParsedStylesSummary {

@@ -189,9 +189,23 @@ const extractParagraphStyle = (pPr: any): ParsedParagraphStyle | undefined => {
 };
 
 export const parseDocxStyles = async (
-  file: File
+  fileOrUrl: File | string
 ): Promise<DocxParsedStyles> => {
-  const zip = await JSZip.loadAsync(file);
+  let fileData: ArrayBuffer;
+
+  if (typeof fileOrUrl === "string") {
+    // Fetch from URL
+    const response = await fetch(fileOrUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch template file: ${response.statusText}`);
+    }
+    fileData = await response.arrayBuffer();
+  } else {
+    // Use File object
+    fileData = await fileOrUrl.arrayBuffer();
+  }
+
+  const zip = await JSZip.loadAsync(fileData);
   const stylesXml = await zip.file("word/styles.xml")?.async("string");
 
   const parser = new XMLParser({

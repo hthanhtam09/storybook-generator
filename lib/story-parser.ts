@@ -54,19 +54,50 @@ function parseStoryBlock(block: string): Story | null {
   const lines = block.split("\n").map((line) => line.trim());
 
   const titleLine = lines[0];
-  const titleMatch = titleLine.match(
+
+  // Try multiple title formats
+  let titleMatch = titleLine.match(
     /(?:Story|Cuento|Histoire|Geschichte|Storia) (\d+):\s*(.+?)\s*\/\s*(.+)/i
   );
 
   if (!titleMatch) {
+    // Try format: Story [number]: Title (Translated Title)
+    titleMatch = titleLine.match(
+      /(?:Story|Cuento|Histoire|Geschichte|Storia) (\d+):\s*(.+?)\s*\(\s*(.+?)\s*\)/i
+    );
+  }
+
+  if (!titleMatch) {
+    // Try format: Story [number]: Title - Translated Title
+    titleMatch = titleLine.match(
+      /(?:Story|Cuento|Histoire|Geschichte|Storia) (\d+):\s*(.+?)\s*-\s*(.+)/i
+    );
+  }
+
+  if (!titleMatch) {
+    // Try format: Story [number]: Title
+    titleMatch = titleLine.match(
+      /(?:Story|Cuento|Histoire|Geschichte|Storia) (\d+):\s*(.+)/i
+    );
+    if (titleMatch) {
+      // If only one title is found, use it for both original and translated
+      titleMatch[3] = titleMatch[2];
+    }
+  }
+
+  if (!titleMatch) {
     throw new Error(
-      "Invalid story title format. Expected: Story/Cuento [number]: Title / Translated Title"
+      "Invalid story title format. Supported formats:\n" +
+        "- Story [number]: Title / Translated Title\n" +
+        "- Story [number]: Title (Translated Title)\n" +
+        "- Story [number]: Title - Translated Title\n" +
+        "- Story [number]: Title"
     );
   }
 
   const storyNumber = Number.parseInt(titleMatch[1], 10);
   const titleOriginal = titleMatch[2].trim();
-  const titleTranslated = titleMatch[3].trim();
+  const titleTranslated = titleMatch[3] ? titleMatch[3].trim() : titleOriginal;
 
   const vocabularyStartIndex = lines.findIndex(
     (line) =>
@@ -351,6 +382,39 @@ function parseStoryBlock(block: string): Story | null {
     );
   }
 
+  // Find and extract illustration prompt
+  let illustrationPrompt: string | undefined;
+  const illustrationStartIndex = lines.findIndex(
+    (line) =>
+      line.startsWith("+") &&
+      (line.toLowerCase().includes("illustration prompt") ||
+        line.toLowerCase().includes("prompt de ilustración"))
+  );
+
+  if (illustrationStartIndex !== -1) {
+    const promptLines: string[] = [];
+    let currentIndex = illustrationStartIndex + 1;
+
+    while (currentIndex < lines.length) {
+      const line = lines[currentIndex].trim();
+
+      // Stop if we hit another section with + prefix or another story
+      if (
+        line.startsWith("+") ||
+        line.match(/^(?:Story|Cuento|Histoire|Geschichte|Storia) \d+:/i)
+      ) {
+        break;
+      }
+
+      if (line) {
+        promptLines.push(line);
+      }
+      currentIndex++;
+    }
+
+    illustrationPrompt = promptLines.join("\n").trim();
+  }
+
   return {
     number: storyNumber,
     titleOriginal,
@@ -360,6 +424,7 @@ function parseStoryBlock(block: string): Story | null {
     textTranslated,
     questions,
     answers,
+    illustrationPrompt,
   };
 }
 
