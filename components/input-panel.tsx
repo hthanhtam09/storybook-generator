@@ -76,6 +76,7 @@ export function InputPanel({
             <MetadataForm
               metadata={metadata}
               onMetadataChange={handleMetadataChange}
+              stories={stories}
             />
           </TabsContent>
 

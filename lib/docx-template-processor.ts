@@ -15,6 +15,7 @@ import {
 } from "docx";
 import type { Story, BookMetadata, ImageFile, TemplateFile } from "./types";
 import { parseDocxStyles, resolveDefaults } from "./docx-style-reader";
+import { convertMarkdownToDocx, createSectionHeader } from "./markdown-to-docx";
 
 // Helper interfaces
 interface TextRunOptions {
@@ -505,57 +506,35 @@ async function generateDocumentFromTemplate(
 
   // Introduction section
   contentChildren.push(
-    createParagraph({
-      children: [
-        createTextRun({
-          text: "Introduction",
-          size: defaultHeading2Size,
-          font: defaultFontFamily,
-          bold: true,
-        }),
-      ],
-      heading: HeadingLevel.HEADING_1,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: SPACING.LARGE },
+    createSectionHeader("Introduction", {
+      defaultBodySizeHalfPoints,
+      defaultFontFamily,
+      defaultParagraphAfterTwips,
+      defaultHeading2Size,
     }),
-    ...metadata.introduction.split("\n").map((line) =>
-      createJustifiedParagraph(
-        line,
-        defaultBodySizeHalfPoints,
-        defaultFontFamily,
-        defaultParagraphAfterTwips,
-        LINE_HEIGHT.ONE_HALF, // 1.5 line spacing
-        LineRuleType.AUTO
-      )
-    ),
+    ...convertMarkdownToDocx(metadata.introduction, {
+      defaultBodySizeHalfPoints,
+      defaultFontFamily,
+      defaultParagraphAfterTwips,
+      defaultHeading2Size,
+    }),
     createParagraph({ children: [new PageBreak()] })
   );
 
   // How to Use This Book section
   contentChildren.push(
-    createParagraph({
-      children: [
-        createTextRun({
-          text: "How to Use This Book",
-          size: defaultHeading2Size,
-          font: defaultFontFamily,
-          bold: true,
-        }),
-      ],
-      heading: HeadingLevel.HEADING_1,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: SPACING.LARGE },
+    createSectionHeader("How to Use This Book", {
+      defaultBodySizeHalfPoints,
+      defaultFontFamily,
+      defaultParagraphAfterTwips,
+      defaultHeading2Size,
     }),
-    ...metadata.howToUse.split("\n").map((line) =>
-      createJustifiedParagraph(
-        line,
-        defaultBodySizeHalfPoints,
-        defaultFontFamily,
-        defaultParagraphAfterTwips,
-        LINE_HEIGHT.ONE_HALF, // 1.5 line spacing
-        LineRuleType.AUTO
-      )
-    ),
+    ...convertMarkdownToDocx(metadata.howToUse, {
+      defaultBodySizeHalfPoints,
+      defaultFontFamily,
+      defaultParagraphAfterTwips,
+      defaultHeading2Size,
+    }),
     createParagraph({ children: [new PageBreak()] })
   );
 
@@ -677,29 +656,18 @@ async function generateDocumentFromTemplate(
 
   // Conclusion section
   contentChildren.push(
-    createParagraph({
-      children: [
-        createTextRun({
-          text: "Conclusion",
-          size: defaultHeading2Size,
-          font: defaultFontFamily,
-          bold: true,
-        }),
-      ],
-      heading: HeadingLevel.HEADING_1,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: SPACING.LARGE },
+    createSectionHeader("Conclusion", {
+      defaultBodySizeHalfPoints,
+      defaultFontFamily,
+      defaultParagraphAfterTwips,
+      defaultHeading2Size,
     }),
-    ...metadata.conclusion.split("\n").map((line) =>
-      createJustifiedParagraph(
-        line,
-        defaultBodySizeHalfPoints,
-        defaultFontFamily,
-        defaultParagraphAfterTwips,
-        LINE_HEIGHT.ONE_HALF, // 1.5 line spacing
-        LineRuleType.AUTO
-      )
-    )
+    ...convertMarkdownToDocx(metadata.conclusion, {
+      defaultBodySizeHalfPoints,
+      defaultFontFamily,
+      defaultParagraphAfterTwips,
+      defaultHeading2Size,
+    })
   );
 
   // Footer with centered page number for content section

@@ -61,6 +61,7 @@ export interface BookMetadata {
   introduction: string;
   howToUse: string;
   conclusion: string;
+  description: string;
   fullPageImage?: File;
 }
 
@@ -74,6 +75,7 @@ export interface BookMetadataSerializable {
   introduction: string;
   howToUse: string;
   conclusion: string;
+  description: string;
   fullPageImageDataUrl?: string;
 }
 

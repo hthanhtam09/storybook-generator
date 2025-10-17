@@ -14,18 +14,28 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Upload, X, Image as ImageIcon } from "lucide-react";
+import {
+  CheckCircle2,
+  X,
+  Image as ImageIcon,
+  Wand2,
+  Loader2,
+} from "lucide-react";
 import { SUPPORTED_LANGUAGES, CURRENT_YEAR } from "@/lib/constants";
-import type { BookMetadata } from "@/lib/types";
+import { generateContent } from "@/lib/deepseek-generator";
+import { useToast } from "@/hooks/use-toast";
+import type { BookMetadata, Story } from "@/lib/types";
 
 interface MetadataFormProps {
   metadata?: BookMetadata | null;
   onMetadataChange?: (metadata: BookMetadata) => void;
+  stories?: Story[];
 }
 
 export function MetadataForm({
   metadata: initialMetadata,
   onMetadataChange,
+  stories = [],
 }: MetadataFormProps) {
   const [metadata, setMetadata] = useState<BookMetadata>(
     initialMetadata || {
@@ -38,12 +48,25 @@ export function MetadataForm({
       introduction: "",
       howToUse: "",
       conclusion: "",
+      description: "",
       fullPageImage: undefined,
     }
   );
   const [fullPageImagePreview, setFullPageImagePreview] = useState<
     string | null
   >(null);
+  const [generatingSections, setGeneratingSections] = useState<{
+    introduction: boolean;
+    howToUse: boolean;
+    conclusion: boolean;
+    description: boolean;
+  }>({
+    introduction: false,
+    howToUse: false,
+    conclusion: false,
+    description: false,
+  });
+  const { toast } = useToast();
 
   useEffect(() => {
     if (initialMetadata) {
@@ -101,6 +124,69 @@ export function MetadataForm({
     }
   };
 
+  const handleGenerateSection = async (
+    type: "introduction" | "howToUse" | "conclusion" | "description"
+  ) => {
+    if (!stories.length) {
+      toast({
+        title: "No Stories Available",
+        description: "Please add some stories before generating content.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!metadata.title || !metadata.author) {
+      toast({
+        title: "Missing Information",
+        description:
+          "Please fill in the book title and author before generating content.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Set loading state for this specific section
+    setGeneratingSections((prev) => ({ ...prev, [type]: true }));
+
+    try {
+      // Show initial loading message
+      toast({
+        title: "Generating Content",
+        description: `Generating ${type} section...`,
+      });
+
+      const result = await generateContent(type, stories, metadata);
+
+      if (result.success && result.content) {
+        updateMetadata(type, result.content);
+        toast({
+          title: "Content Generated",
+          description: `Successfully generated ${type} section.`,
+        });
+      } else {
+        const isRateLimited = result.error?.includes("rate-limited");
+        toast({
+          title: isRateLimited
+            ? "Service Temporarily Unavailable"
+            : "Generation Failed",
+          description: result.error || "Failed to generate content",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Generation error:", error);
+      toast({
+        title: "Generation Error",
+        description: "An unexpected error occurred while generating content.",
+        variant: "destructive",
+      });
+    } finally {
+      // Clear loading state for this specific section
+      setGeneratingSections((prev) => ({ ...prev, [type]: false }));
+    }
+  };
+
   const requiredFieldsFilled =
     metadata.title &&
     metadata.author &&
@@ -108,7 +194,8 @@ export function MetadataForm({
     metadata.publicationLocation &&
     metadata.introduction &&
     metadata.howToUse &&
-    metadata.conclusion;
+    metadata.conclusion &&
+    metadata.description;
 
   const completionCount = [
     metadata.title,
@@ -118,6 +205,7 @@ export function MetadataForm({
     metadata.introduction,
     metadata.howToUse,
     metadata.conclusion,
+    metadata.description,
   ].filter(Boolean).length;
 
   return (
@@ -131,7 +219,7 @@ export function MetadataForm({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="gap-1">
-            {completionCount} / 7 fields
+            {completionCount} / 8 fields
           </Badge>
           {requiredFieldsFilled && (
             <Badge
@@ -319,9 +407,30 @@ export function MetadataForm({
             </h4>
 
             <div className="space-y-2">
-              <Label htmlFor="introduction" className="text-xs">
-                Introduction <span className="text-destructive">*</span>
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="introduction" className="text-xs">
+                  Introduction <span className="text-destructive">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleGenerateSection("introduction")}
+                  disabled={
+                    generatingSections.introduction ||
+                    !stories.length ||
+                    !metadata.title ||
+                    !metadata.author
+                  }
+                  className="h-6 px-2 text-xs"
+                >
+                  {generatingSections.introduction ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
               <Textarea
                 id="introduction"
                 value={metadata.introduction}
@@ -335,9 +444,31 @@ export function MetadataForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="howToUse" className="text-xs">
-                How to Use This Book <span className="text-destructive">*</span>
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="howToUse" className="text-xs">
+                  How to Use This Book{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleGenerateSection("howToUse")}
+                  disabled={
+                    generatingSections.howToUse ||
+                    !stories.length ||
+                    !metadata.title ||
+                    !metadata.author
+                  }
+                  className="h-6 px-2 text-xs"
+                >
+                  {generatingSections.howToUse ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
               <Textarea
                 id="howToUse"
                 value={metadata.howToUse}
@@ -351,9 +482,30 @@ export function MetadataForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="conclusion" className="text-xs">
-                Conclusion <span className="text-destructive">*</span>
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="conclusion" className="text-xs">
+                  Conclusion <span className="text-destructive">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleGenerateSection("conclusion")}
+                  disabled={
+                    generatingSections.conclusion ||
+                    !stories.length ||
+                    !metadata.title ||
+                    !metadata.author
+                  }
+                  className="h-6 px-2 text-xs"
+                >
+                  {generatingSections.conclusion ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
               <Textarea
                 id="conclusion"
                 value={metadata.conclusion}
@@ -363,6 +515,43 @@ export function MetadataForm({
               />
               <p className="text-xs text-muted-foreground">
                 {metadata.conclusion.length} characters
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="description" className="text-xs">
+                  Book Description <span className="text-destructive">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleGenerateSection("description")}
+                  disabled={
+                    generatingSections.description ||
+                    !stories.length ||
+                    !metadata.title ||
+                    !metadata.author
+                  }
+                  className="h-6 px-2 text-xs"
+                >
+                  {generatingSections.description ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
+              <Textarea
+                id="description"
+                value={metadata.description}
+                onChange={(e) => updateMetadata("description", e.target.value)}
+                placeholder="Write a compelling book description for marketing and sales purposes."
+                className="min-h-[120px] text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                {metadata.description.length} characters
               </p>
             </div>
           </div>
