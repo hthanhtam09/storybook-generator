@@ -200,14 +200,44 @@ function parseStoryBlock(block: string): Story | null {
   while (currentIndex < lines.length) {
     const line = lines[currentIndex].trim();
 
-    // Stop if we hit another capitalized title-like line (the translated version)
+    // Stop if we hit another section with + prefix (like the translated title)
+    if (line && line.startsWith("+")) {
+      // Check if this looks like a translated title (not a section header)
+      const titleText = line.substring(1).trim(); // Remove the + prefix
+      if (
+        titleText &&
+        titleText[0] === titleText[0].toUpperCase() &&
+        !titleText.includes(".") &&
+        !titleText.includes(",") &&
+        !titleText.toLowerCase().includes("vocabulario") &&
+        !titleText.toLowerCase().includes("vocabulary") &&
+        !titleText.toLowerCase().includes("preguntas") &&
+        !titleText.toLowerCase().includes("comprehension") &&
+        !titleText.toLowerCase().includes("respuestas") &&
+        !titleText.toLowerCase().includes("answers") &&
+        !titleText.toLowerCase().includes("illustration") &&
+        !titleText.toLowerCase().includes("prompt") &&
+        titleText.length > 3 &&
+        titleText.length < 100 &&
+        originalStoryLines.length > 0
+      ) {
+        // This looks like a translated title, stop here
+        break;
+      }
+    }
+
+    // Also stop if we hit another capitalized title-like line (the translated version)
     // Look for a line that appears to be a title (capitalized, no periods, reasonable length)
+    // But be more specific - it should look like a proper title, not dialogue
     if (
       line &&
       line[0] === line[0].toUpperCase() &&
       !line.startsWith("—") &&
       !line.startsWith('"') &&
+      !line.startsWith("+") &&
       !line.includes(".") &&
+      !line.includes(",") &&
+      !line.includes(":") && // Exclude dialogue lines like "A sombra sussurra:"
       line.length > 3 &&
       line.length < 100 && // Reasonable title length
       originalStoryLines.length > 0 // At least some story content
@@ -215,7 +245,9 @@ function parseStoryBlock(block: string): Story | null {
       // Additional check: if the next few lines also look like story content,
       // this might be the translated title
       let looksLikeTranslatedTitle = true;
-      for (let i = 1; i <= 3 && currentIndex + i < lines.length; i++) {
+      let hasStoryContentAfter = false;
+
+      for (let i = 1; i <= 5 && currentIndex + i < lines.length; i++) {
         const nextLine = lines[currentIndex + i].trim();
         if (
           nextLine &&
@@ -226,9 +258,21 @@ function parseStoryBlock(block: string): Story | null {
           looksLikeTranslatedTitle = false;
           break;
         }
+
+        // Check if there's actual story content after this line
+        if (
+          nextLine &&
+          !nextLine.startsWith("+") &&
+          (nextLine.includes(".") ||
+            nextLine.includes("—") ||
+            nextLine.includes('"'))
+        ) {
+          hasStoryContentAfter = true;
+        }
       }
 
-      if (looksLikeTranslatedTitle) {
+      // If this looks like a title and there's story content after it, it's likely the translated title
+      if (looksLikeTranslatedTitle && hasStoryContentAfter) {
         break;
       }
     }
@@ -239,7 +283,8 @@ function parseStoryBlock(block: string): Story | null {
     currentIndex++;
   }
 
-  currentIndex++; // Skip the translated title
+  // Skip the translated title line
+  currentIndex++;
   const translatedStoryLines: string[] = [];
 
   while (currentIndex < lines.length) {
