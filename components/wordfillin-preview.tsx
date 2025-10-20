@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Eye, EyeOff, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import type { WordFillInPage, WordFillInPuzzle } from "@/lib/types";
 
@@ -122,10 +120,8 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
     if (!previewRef.current) return;
     try {
       setIsExporting(true);
-      console.log("Starting PDF export...");
 
       const html2canvas = (await import("html2canvas")).default;
-      console.log("html2canvas loaded");
 
       const jsPDFModule = await import("jspdf");
       const jsPDF = jsPDFModule.jsPDF || jsPDFModule.default;
@@ -137,7 +133,6 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
         * {
           color: rgb(0, 0, 0) !important;
           background-color: rgb(255, 255, 255) !important;
-          border-color: rgb(204, 204, 204) !important;
         }
         .bg-black {
           background-color: rgb(0, 0, 0) !important;
@@ -174,14 +169,11 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
       // Add the style to the document head
       document.head.appendChild(styleOverride);
 
-      console.log("Creating PDF with all pages...");
-
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "in",
         format: [8.5, 11], // 8.5 x 11 inches
       });
-      console.log("PDF created");
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -191,31 +183,22 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
 
       // Process each puzzle page
       for (let i = 0; i < puzzles.length; i++) {
-        console.log(`Processing page ${i + 1}/${puzzles.length}...`);
         // Wait for DOM to update
+        handlePageChange(i);
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         const node = previewRef.current;
         if (!node) continue;
 
-        console.log(`Capturing page ${i + 1}...`);
-
         // Create temporary style for PDF export - larger cells only for download
-        const gridSize = puzzles[i].puzzle.grid.length;
         const margin = 0.5; // inches
-        const availableWidthIn = pageWidth - margin * 2;
-        const availableHeightIn = pageHeight - margin * 2;
-        const cellSizeIn = Math.min(
-          availableWidthIn / gridSize,
-          availableHeightIn / gridSize
-        );
 
         const pdfStyleOverride = document.createElement("style");
         pdfStyleOverride.textContent = `
           .puzzle-cell { 
-            width: ${cellSizeIn}in !important; 
-            height: ${cellSizeIn}in !important; 
-            font-size: ${Math.max(cellSizeIn * 0.4, 0.2)}in !important;
+            width: 1.5in !important; 
+            height: 1.5in !important; 
+            font-size: 0.2in !important;
             font-weight: bold !important;
           }
         `;
@@ -230,13 +213,6 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
           useCORS: true,
           logging: false,
         });
-
-        console.log(
-          `Canvas created for page ${i + 1}:`,
-          canvas.width,
-          "x",
-          canvas.height
-        );
 
         const imgData = canvas.toDataURL("image/png");
 
@@ -277,8 +253,6 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
           undefined,
           "FAST"
         );
-
-        console.log(`Page ${i + 1} added to PDF`);
       }
 
       // Restore original page
@@ -386,15 +360,11 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
         {currentPuzzle && (
           <div className="space-y-6">
             {/* Puzzle Grid */}
-            <Card ref={previewRef}>
-              <CardHeader>
-                <CardTitle className="text-center">
-                  Word Fill-in Puzzle - Trang {currentPageIndex + 1}
-                </CardTitle>
-              </CardHeader>
+            <Card>
               <CardContent>
                 <div className="flex justify-center">
                   <div
+                    ref={previewRef}
                     className="grid gap-0 border-2 border-gray-800"
                     style={{
                       gridTemplateColumns: `repeat(${currentPuzzle.grid.length}, 1fr)`,
@@ -410,11 +380,11 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
                             ${
                               cell.isBlack
                                 ? "bg-black"
-                                : cell.letter
+                                : showAnswers && cell.letter
                                 ? `${getWordBackgroundColor(
                                     cell.wordId
                                   )} ${getWordColor(cell.wordId)}`
-                                : "bg-gray-100"
+                                : "bg-white"
                             }
                             ${
                               cell.isRevealed && cell.letter
