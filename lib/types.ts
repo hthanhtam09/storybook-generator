@@ -106,3 +106,42 @@ export interface ExportedDocument {
   metadata: BookMetadataSerializable;
   storiesCount: number;
 }
+
+// Word Fill-in Puzzle Types
+export interface WordFillInConfig {
+  words: string[];
+  pages: number;
+  gridSize: number;
+  showAnswers: boolean;
+}
+
+export interface WordFillInCell {
+  letter: string | null;
+  isBlack: boolean;
+  isRevealed: boolean;
+  wordId?: string;
+  position?: number;
+}
+
+export interface WordFillInWord {
+  id: string;
+  word: string;
+  startRow: number;
+  startCol: number;
+  direction: "horizontal" | "vertical";
+  cells: { row: number; col: number }[];
+}
+
+export interface WordFillInPuzzle {
+  id: string;
+  pageNumber: number;
+  grid: WordFillInCell[][];
+  words: WordFillInWord[];
+  wordList: string[];
+  config: WordFillInConfig;
+}
+
+export interface WordFillInPage {
+  pageNumber: number;
+  puzzle: WordFillInPuzzle;
+}

@@ -9,9 +9,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    serverComponentsExternalPackages: ["mongodb"],
-  },
   // Increase body size limits for API routes
   api: {
     bodyParser: {
