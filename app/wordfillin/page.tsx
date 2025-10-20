@@ -4,6 +4,7 @@ import { useState } from "react";
 import { WordFillInInput } from "@/components/wordfillin-input";
 import { WordFillInPreview } from "@/components/wordfillin-preview";
 import type { WordFillInPage } from "@/lib/types";
+import { Header } from "@/components/header";
 
 export default function WordFillInPage() {
   const [puzzles, setPuzzles] = useState<WordFillInPage[]>([]);
@@ -15,6 +16,7 @@ export default function WordFillInPage() {
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
+      <Header />
       <div className="border-b border-border px-6 py-4">
         <h1 className="text-2xl font-bold">Word Fill-in Puzzle Generator</h1>
         <p className="text-muted-foreground">
