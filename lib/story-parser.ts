@@ -226,9 +226,8 @@ function parseStoryBlock(block: string): Story | null {
       }
     }
 
-    // Also stop if we hit another capitalized title-like line (the translated version)
-    // Look for a line that appears to be a title (capitalized, no periods, reasonable length)
-    // But be more specific - it should look like a proper title, not dialogue
+    // Stop if we hit an English translated title (without + prefix)
+    // Check for English titles that are common English words/patterns
     if (
       line &&
       line[0] === line[0].toUpperCase() &&
@@ -237,42 +236,50 @@ function parseStoryBlock(block: string): Story | null {
       !line.startsWith("+") &&
       !line.includes(".") &&
       !line.includes(",") &&
-      !line.includes(":") && // Exclude dialogue lines like "A sombra sussurra:"
+      !line.includes(":") &&
+      !line.includes("？") && // Japanese question mark
+      !line.includes("！") && // Japanese exclamation mark
       line.length > 3 &&
-      line.length < 100 && // Reasonable title length
-      originalStoryLines.length > 0 // At least some story content
+      line.length < 100 &&
+      originalStoryLines.length > 0 && // At least some story content
+      // Check if this line contains only English characters (no hiragana, katakana, kanji)
+      !/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(line) &&
+      // Check if it's likely an English title by looking at common English words
+      (/^The\s+/.test(line) ||
+        /^A\s+/.test(line) ||
+        /^An\s+/.test(line) ||
+        line.split(" ").length <= 6) // Short title-like structure
     ) {
-      // Additional check: if the next few lines also look like story content,
-      // this might be the translated title
-      let looksLikeTranslatedTitle = true;
-      let hasStoryContentAfter = false;
+      // Additional check: ensure the next few lines look like English story content
+      let looksLikeEnglishTitle = true;
+      let hasEnglishContentAfter = false;
 
-      for (let i = 1; i <= 5 && currentIndex + i < lines.length; i++) {
+      for (let i = 1; i <= 3 && currentIndex + i < lines.length; i++) {
         const nextLine = lines[currentIndex + i].trim();
         if (
           nextLine &&
           (nextLine.startsWith("+") ||
-            nextLine.toLowerCase().includes("preguntas") ||
             nextLine.toLowerCase().includes("comprehension"))
         ) {
-          looksLikeTranslatedTitle = false;
+          looksLikeEnglishTitle = false;
           break;
         }
 
-        // Check if there's actual story content after this line
+        // Check if there's English story content after this line
         if (
           nextLine &&
           !nextLine.startsWith("+") &&
+          !/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(nextLine) && // No Japanese characters
           (nextLine.includes(".") ||
-            nextLine.includes("—") ||
-            nextLine.includes('"'))
+            nextLine.includes("!") ||
+            nextLine.includes("?"))
         ) {
-          hasStoryContentAfter = true;
+          hasEnglishContentAfter = true;
         }
       }
 
-      // If this looks like a title and there's story content after it, it's likely the translated title
-      if (looksLikeTranslatedTitle && hasStoryContentAfter) {
+      // If this looks like an English title and there's English content after it, stop here
+      if (looksLikeEnglishTitle && hasEnglishContentAfter) {
         break;
       }
     }
@@ -293,8 +300,7 @@ function parseStoryBlock(block: string): Story | null {
     // Stop if we hit the questions section with + prefix
     if (
       line.startsWith("+") &&
-      (line.toLowerCase().includes("preguntas de comprensión") ||
-        line.toLowerCase().includes("comprehension questions"))
+      line.toLowerCase().includes("comprehension questions")
     ) {
       break;
     }
@@ -317,13 +323,12 @@ function parseStoryBlock(block: string): Story | null {
   const questionsStartIndex = lines.findIndex(
     (line) =>
       line.startsWith("+") &&
-      (line.toLowerCase().includes("preguntas de comprensión") ||
-        line.toLowerCase().includes("comprehension questions"))
+      line.toLowerCase().includes("comprehension questions")
   );
 
   if (questionsStartIndex === -1) {
     throw new Error(
-      `Story ${storyNumber}: Missing +Preguntas de Comprensión / +Comprehension Questions section`
+      `Story ${storyNumber}: Missing +Preguntas de Comprensión / +Comprehension Questions / +質問 section`
     );
   }
 
@@ -383,9 +388,7 @@ function parseStoryBlock(block: string): Story | null {
   // Find the answers section
   const answersStartIndex = lines.findIndex(
     (line) =>
-      line.startsWith("+") &&
-      (line.toLowerCase().includes("respuestas correctas") ||
-        line.toLowerCase().includes("correct answers"))
+      line.startsWith("+") && line.toLowerCase().includes("correct answers")
   );
 
   if (answersStartIndex !== -1) {
