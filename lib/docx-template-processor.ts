@@ -137,6 +137,55 @@ const LINE_HEIGHT = {
   TRIPLE: 720, // 3.0 line spacing
 } as const;
 
+/**
+ * Helper function to create text runs with vocabulary words bolded
+ */
+function createTextRunsWithBoldVocabulary(
+  text: string,
+  vocabularyWords: string[],
+  size: number,
+  font: string
+): TextRun[] {
+  if (vocabularyWords.length === 0) {
+    return [createTextRun({ text, size, font })];
+  }
+
+  // Create a regex pattern that matches any vocabulary word (case-insensitive, whole word)
+  // Sort by length descending to match longer phrases first
+  const sortedWords = [...vocabularyWords].sort((a, b) => b.length - a.length);
+  const pattern = sortedWords
+    .map((word) => {
+      // Escape special regex characters and handle multi-word phrases
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return `\\b${escaped}\\b`;
+    })
+    .join("|");
+
+  const regex = new RegExp(`(${pattern})`, "gi");
+  const parts = text.split(regex);
+  const textRuns: TextRun[] = [];
+
+  for (const part of parts) {
+    if (!part) continue;
+
+    // Check if this part matches any vocabulary word
+    const isVocabWord = vocabularyWords.some(
+      (word) => word.toLowerCase() === part.toLowerCase()
+    );
+
+    textRuns.push(
+      createTextRun({
+        text: part,
+        size,
+        font,
+        bold: isVocabWord,
+      })
+    );
+  }
+
+  return textRuns.length > 0 ? textRuns : [createTextRun({ text, size, font })];
+}
+
 // Story section builder functions
 function buildStoryHeader(
   story: Story,
@@ -212,17 +261,40 @@ function buildStoryVocabulary(
 
   story.vocabulary.forEach((word, index) => {
     paragraphs.push(
-      createLeftParagraph(
-        `${index + 1}. ${word.word} → /${word.ipa}/ → ${word.pronunciation} → ${
-          word.translation
-        }`,
-        defaultBodySizeHalfPoints,
-        defaultFontFamily,
-        Math.max(SPACING.SMALL, Math.round(defaultParagraphAfterTwips * 0.5)),
-        false,
-        LINE_HEIGHT.DOUBLE,
-        LineRuleType.AUTO
-      )
+      createParagraph({
+        children: [
+          createTextRun({
+            text: `${index + 1}. `,
+            size: defaultBodySizeHalfPoints,
+            font: defaultFontFamily,
+            bold: false,
+          }),
+          createTextRun({
+            text: word.word,
+            size: defaultBodySizeHalfPoints,
+            font: defaultFontFamily,
+            bold: true,
+          }),
+          createTextRun({
+            text: ` → /${word.ipa}/ → ${word.pronunciation} → `,
+            size: defaultBodySizeHalfPoints,
+            font: defaultFontFamily,
+            bold: false,
+          }),
+          createTextRun({
+            text: word.translation,
+            size: defaultBodySizeHalfPoints,
+            font: defaultFontFamily,
+            bold: true,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: {
+          after: Math.max(SPACING.SMALL, Math.round(defaultParagraphAfterTwips * 0.5)),
+          line: LINE_HEIGHT.DOUBLE,
+          lineRule: LineRuleType.AUTO,
+        },
+      })
     );
   });
 
@@ -237,6 +309,10 @@ function buildStoryText(
   defaultParagraphAfterTwips: number
 ): Paragraph[] {
   const paragraphs: Paragraph[] = [];
+
+  // Extract vocabulary words for bolding
+  const originalVocabWords = story.vocabulary.map((v) => v.word);
+  const translatedVocabWords = story.vocabulary.map((v) => v.translation);
 
   // Original text
   paragraphs.push(
@@ -253,15 +329,24 @@ function buildStoryText(
 
   story.textOriginal.split("\n").forEach((line) => {
     if (line.trim()) {
+      const processedLine = line.replace(/—/g, "\u2014");
+      const textRuns = createTextRunsWithBoldVocabulary(
+        processedLine,
+        originalVocabWords,
+        defaultBodySizeHalfPoints,
+        defaultFontFamily
+      );
+
       paragraphs.push(
-        createJustifiedParagraph(
-          line.replace(/—/g, "\u2014"),
-          defaultBodySizeHalfPoints,
-          defaultFontFamily,
-          defaultParagraphAfterTwips,
-          LINE_HEIGHT.DOUBLE,
-          LineRuleType.AUTO
-        )
+        createParagraph({
+          children: textRuns,
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: {
+            after: defaultParagraphAfterTwips,
+            line: LINE_HEIGHT.DOUBLE,
+            lineRule: LineRuleType.AUTO,
+          },
+        })
       );
     }
   });
@@ -281,15 +366,24 @@ function buildStoryText(
 
   story.textTranslated.split("\n").forEach((line) => {
     if (line.trim()) {
+      const processedLine = line.replace(/—/g, "\u2014");
+      const textRuns = createTextRunsWithBoldVocabulary(
+        processedLine,
+        translatedVocabWords,
+        defaultBodySizeHalfPoints,
+        defaultFontFamily
+      );
+
       paragraphs.push(
-        createJustifiedParagraph(
-          line.replace(/—/g, "\u2014"),
-          defaultBodySizeHalfPoints,
-          defaultFontFamily,
-          defaultParagraphAfterTwips,
-          LINE_HEIGHT.DOUBLE,
-          LineRuleType.AUTO
-        )
+        createParagraph({
+          children: textRuns,
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: {
+            after: defaultParagraphAfterTwips,
+            line: LINE_HEIGHT.DOUBLE,
+            lineRule: LineRuleType.AUTO,
+          },
+        })
       );
     }
   });
