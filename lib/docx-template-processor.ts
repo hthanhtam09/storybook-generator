@@ -290,7 +290,10 @@ function buildStoryVocabulary(
         ],
         alignment: AlignmentType.LEFT,
         spacing: {
-          after: Math.max(SPACING.SMALL, Math.round(defaultParagraphAfterTwips * 0.5)),
+          after: Math.max(
+            SPACING.SMALL,
+            Math.round(defaultParagraphAfterTwips * 0.5)
+          ),
           line: LINE_HEIGHT.DOUBLE,
           lineRule: LineRuleType.AUTO,
         },
