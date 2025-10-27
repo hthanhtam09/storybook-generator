@@ -83,63 +83,61 @@ export function ExportButton({
       }
 
       // Create a File object from the blob
-      const file = new File([blob], filename, {
-        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      });
+      // const file = new File([blob], filename, {
+      //   type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      // });
 
       // Prepare metadata for serialization
-      const serializableMetadata = {
-        ...metadata,
-        fullPageImage: metadata.fullPageImage, // Keep File object for server processing
-      };
+      // const serializableMetadata = {
+      //   ...metadata,
+      //   fullPageImage: metadata.fullPageImage, // Keep File object for server processing
+      // };
 
-      // Save to database
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("metadata", JSON.stringify(serializableMetadata));
-      formData.append("storiesCount", stories.length.toString());
+      // // Save to database
+      // const formData = new FormData();
+      // formData.append("file", file);
+      // formData.append("metadata", JSON.stringify(serializableMetadata));
+      // formData.append("storiesCount", stories.length.toString());
 
-      // If there's a fullPageImage, append it separately
-      if (metadata.fullPageImage) {
-        formData.append("fullPageImage", metadata.fullPageImage);
-      } else {
-        console.log("No fullPageImage to append");
-      }
+      // // If there's a fullPageImage, append it separately
+      // if (metadata.fullPageImage) {
+      //   formData.append("fullPageImage", metadata.fullPageImage);
+      // } else {
+      //   console.log("No fullPageImage to append");
+      // }
 
-      const saveResponse = await fetch("/api/documents", {
-        method: "POST",
-        body: formData,
-      });
+      // const saveResponse = await fetch("/api/documents", {
+      //   method: "POST",
+      //   body: formData,
+      // });
 
-      if (!saveResponse.ok) {
-        const errorText = await saveResponse.text();
-        console.error("Save response error:", {
-          status: saveResponse.status,
-          statusText: saveResponse.statusText,
-          errorText: errorText,
-        });
+      // if (!saveResponse.ok) {
+      //   const errorText = await saveResponse.text();
+      //   console.error("Save response error:", {
+      //     status: saveResponse.status,
+      //     statusText: saveResponse.statusText,
+      //     errorText: errorText,
+      //   });
 
-        // Handle specific error cases
-        if (saveResponse.status === 413) {
-          try {
-            const errorData = JSON.parse(errorText);
-            throw new Error(
-              errorData.message ||
-                "Document is too large to save. Please reduce the number of stories or images."
-            );
-          } catch {
-            throw new Error(
-              "Document is too large to save. Please reduce the number of stories or images."
-            );
-          }
-        }
+      //   // Handle specific error cases
+      //   if (saveResponse.status === 413) {
+      //     try {
+      //       const errorData = JSON.parse(errorText);
+      //       throw new Error(
+      //         errorData.message ||
+      //           "Document is too large to save. Please reduce the number of stories or images."
+      //       );
+      //     } catch {
+      //       throw new Error(
+      //         "Document is too large to save. Please reduce the number of stories or images."
+      //       );
+      //     }
+      //   }
 
-        throw new Error(
-          `Failed to save document to database: ${saveResponse.status} ${saveResponse.statusText}`
-        );
-      }
-
-      const saveResult = await saveResponse.json();
+      //   throw new Error(
+      //     `Failed to save document to database: ${saveResponse.status} ${saveResponse.statusText}`
+      //   );
+      // }
 
       // Also provide immediate download
       const url = URL.createObjectURL(blob);
