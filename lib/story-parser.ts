@@ -158,12 +158,6 @@ function parseStoryBlock(block: string): Story | null {
     currentIndex++;
   }
 
-  if (vocabulary.length !== 10) {
-    throw new Error(
-      `Story ${storyNumber}: Expected 10 vocabulary words, found ${vocabulary.length}`
-    );
-  }
-
   let storyTextStartIndex = -1;
   for (let i = currentIndex; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -395,7 +389,8 @@ function parseStoryBlock(block: string): Story | null {
     currentIndex = answersStartIndex + 1;
 
     // Parse answers - each answer is on a separate line starting with a), b), or c)
-    while (currentIndex < lines.length) {
+    // Stop when we've found enough answers (one per question) or hit another section
+    while (currentIndex < lines.length && answers.length < questions.length) {
       const line = lines[currentIndex].trim();
 
       // Stop if we hit another section with + prefix or another story
@@ -412,7 +407,7 @@ function parseStoryBlock(block: string): Story | null {
         continue;
       }
 
-      // Match answer format: a) text / translated text
+      // Match answer format: a) text or a) text / translated text
       // We only need to extract the letter
       const answerMatch = line.match(/^([a-c])\)/);
 
@@ -489,13 +484,6 @@ export function validateStories(stories: Story[]): ValidationError[] {
 
   for (const story of stories) {
     // Validate vocabulary count
-    if (story.vocabulary.length !== 10) {
-      errors.push({
-        message: `Story ${story.number}: Must have exactly 10 vocabulary words`,
-        severity: "error",
-      });
-    }
-
     if (story.questions.length === 0) {
       errors.push({
         message: `Story ${story.number}: Must have at least one comprehension question`,
