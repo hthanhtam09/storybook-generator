@@ -1,22 +1,301 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Story } from "@/lib/types";
 
-interface GenerateRequest {
+export interface GenerateRequest {
   type: "introduction" | "howToUse" | "conclusion" | "description";
   stories: Story[];
   metadata: {
     title: string;
     author: string;
     language: string;
+    subtitle?: string;
+    proficiencyLevel?: "Beginner" | "Intermediate" | "Advanced";
   };
 }
 
-const generatePrompt = (
+// Detect target language mentioned in title/subtitle for teaching focus
+export const detectTargetLanguageFromTitle = (
+  title: string,
+  subtitle?: string
+): string | null => {
+  const haystack = `${title} ${subtitle || ""}`.toLowerCase();
+  const mapping: Record<string, string> = {
+    spanish: "Spanish",
+    español: "Spanish",
+    french: "French",
+    français: "French",
+    german: "German",
+    deutsch: "German",
+    italian: "Italian",
+    italiano: "Italian",
+    portuguese: "Portuguese",
+    português: "Portuguese",
+    russian: "Russian",
+    japanese: "Japanese",
+    nihongo: "Japanese",
+    korean: "Korean",
+    hangul: "Korean",
+    chinese: "Chinese",
+    mandarin: "Chinese",
+    arabic: "Arabic",
+    hindi: "Hindi",
+    thai: "Thai",
+    vietnamese: "Vietnamese",
+  };
+
+  for (const key of Object.keys(mapping)) {
+    if (haystack.includes(key)) return mapping[key];
+  }
+  return null;
+};
+
+// Curated high-level theme detection across multiple languages
+export const detectHighLevelTheme = (
+  titles: string[],
+  bookTitle: string,
+  subtitle?: string
+): { primary?: string; related?: string[] } => {
+  const haystack = `${bookTitle} ${subtitle || ""} ${titles.join(
+    " "
+  )}`.toLowerCase();
+  const candidates: Array<{
+    name: string;
+    keywords: string[];
+    related?: string[];
+  }> = [
+    {
+      name: "Christmas",
+      keywords: [
+        "christmas",
+        "navidad",
+        "noël",
+        "xmas",
+        "natale",
+        "weihnacht",
+        "navideño",
+        "festive",
+        "holiday",
+      ],
+      related: ["festive", "holiday", "winter"],
+    },
+    {
+      name: "Halloween",
+      keywords: ["halloween", "día de brujas", "hallowe'en"],
+      related: ["spooky", "autumn"],
+    },
+    {
+      name: "Easter",
+      keywords: ["easter", "pascua", "paques", "ostern"],
+      related: ["spring", "holiday"],
+    },
+    {
+      name: "Winter",
+      keywords: ["winter", "invierno", "hiver", "inverno", "winterzeit"],
+      related: ["snow", "holiday"],
+    },
+    {
+      name: "Summer",
+      keywords: ["summer", "verano", "été", "estate", "sommer"],
+      related: ["vacation", "travel"],
+    },
+    {
+      name: "School",
+      keywords: ["school", "escuela", "école", "schul"],
+      related: ["classroom", "learning"],
+    },
+  ];
+
+  for (const c of candidates) {
+    if (c.keywords.some((k) => haystack.includes(k))) {
+      return { primary: c.name, related: c.related || [] };
+    }
+  }
+  return {};
+};
+
+// Extract lightweight themes from story titles (prioritize high-level themes)
+export const extractThemesFromStories = (
+  stories: Story[],
+  bookTitle?: string,
+  subtitle?: string
+) => {
+  const titles = stories.map((s) => s.titleOriginal);
+  const tokens: string[] = [];
+  const stopwords = new Set([
+    "the",
+    "a",
+    "an",
+    "and",
+    "of",
+    "in",
+    "on",
+    "at",
+    "to",
+    "for",
+    "with",
+    "by",
+    "from",
+    "about",
+    "into",
+    "over",
+    "under",
+    "after",
+    "before",
+    "is",
+    "are",
+    "be",
+    "being",
+    "been",
+    "this",
+    "that",
+    "these",
+    "those",
+    "my",
+    "your",
+    "his",
+    "her",
+    "their",
+    "our",
+    // common romance articles/preps
+    "el",
+    "la",
+    "los",
+    "las",
+    "un",
+    "una",
+    "unos",
+    "unas",
+    "de",
+    "del",
+    "al",
+    "y",
+    "en",
+    "con",
+    "por",
+    "para",
+  ]);
+
+  const noisySpecifics = new Set([
+    // de-prioritize overly specific nouns that shouldn't become the main theme
+    "árbol",
+    "arbol",
+    "estrella",
+    "cantora",
+    "duende",
+    "tree",
+    "star",
+    "singer",
+    "imp",
+  ]);
+
+  titles.forEach((t) => {
+    t.replace(/[^\p{L}\p{N}\s-]/gu, " ")
+      .split(/\s+/)
+      .map((w) => w.trim())
+      .filter(Boolean)
+      .forEach((w) => {
+        const lw = w.toLowerCase();
+        if (lw.length < 3) return;
+        if (stopwords.has(lw)) return;
+        if (noisySpecifics.has(lw)) return;
+        tokens.push(lw);
+      });
+  });
+
+  const freq = new Map<string, number>();
+  tokens.forEach((t) => freq.set(t, (freq.get(t) || 0) + 1));
+  const top = Array.from(freq.entries())
+    .filter(([, count]) => count > 1) // reduce singletons
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([w]) => w);
+
+  const { primary: curatedPrimary, related: curatedRelated } =
+    detectHighLevelTheme(titles, bookTitle || "", subtitle);
+
+  const primaryTheme = curatedPrimary || top[0] || titles[0] || "stories";
+  const relatedThemes =
+    curatedRelated && curatedRelated.length
+      ? curatedRelated
+      : top.filter((t) => t !== primaryTheme);
+  const themeList = [primaryTheme, ...relatedThemes].slice(0, 5);
+  const themeSummary = themeList.join(", ");
+
+  // Sample a few titles only (avoid listing all)
+  const examples = titles.slice(0, 3);
+
+  return { titles, themeSummary, primaryTheme, examples };
+};
+
+// Generate SEO keyword phrases from theme and target language
+export const buildSeoKeywords = (
+  primaryTheme: string,
+  targetLanguage: string,
+  proficiencyLevel: "Beginner" | "Intermediate" | "Advanced"
+): string[] => {
+  const theme = primaryTheme.toLowerCase();
+  const lang = targetLanguage;
+  const level = proficiencyLevel.toLowerCase();
+
+  const base = [
+    `${theme} short stories in ${lang}`,
+    `learn ${lang} through ${theme} stories`,
+    `${lang} ${theme} vocabulary`,
+    `${lang} reading practice ${theme}`,
+    `${lang} ${level} stories ${theme}`,
+    `${lang} ${theme} book for ${proficiencyLevel}`,
+    `${lang} ${theme} reading comprehension B1`,
+    `${lang} ${theme} beginner to ${level} workbook`,
+  ];
+
+  // Add seasonal/occasion variants when relevant
+  if (
+    [
+      "christmas",
+      "navidad",
+      "xmas",
+      "noël",
+      "halloween",
+      "easter",
+      "pascua",
+      "summer",
+      "winter",
+      "spring",
+      "autumn",
+    ].some((x) => theme.includes(x))
+  ) {
+    base.push(
+      `${lang} ${theme} activities`,
+      `${theme} phrases in ${lang}`,
+      `${theme} themed language learning`,
+      `${lang} festive reading ${theme}`,
+      `${lang} holiday gift ${theme} book`
+    );
+  }
+
+  // De-duplicate and keep concise top 10
+  return Array.from(new Set(base)).slice(0, 10);
+};
+
+export const generatePrompt = (
   type: "introduction" | "howToUse" | "conclusion" | "description",
   stories: Story[],
-  metadata: { title: string; author: string; language: string }
+  metadata: {
+    title: string;
+    author: string;
+    language: string;
+    subtitle?: string;
+    proficiencyLevel?: "Beginner" | "Intermediate" | "Advanced";
+  }
 ): string => {
-  const storyTitles = stories.map((story) => story.titleOriginal).join(", ");
+  const {
+    titles: storyTitlesArr,
+    themeSummary,
+    primaryTheme,
+    examples,
+  } = extractThemesFromStories(stories, metadata.title, metadata.subtitle);
+  const storyTitles = storyTitlesArr.join(", ");
+
   const languageName =
     metadata.language === "en"
       ? "English"
@@ -48,34 +327,64 @@ const generatePrompt = (
       ? "Vietnamese"
       : metadata.language;
 
+  const targetLanguageFromTitle =
+    detectTargetLanguageFromTitle(metadata.title, metadata.subtitle) ||
+    "the target language from the title";
+
+  const fullDisplayTitle = metadata.subtitle
+    ? `${metadata.title}: ${metadata.subtitle}`
+    : metadata.title;
+
+  const examplesText = examples.length ? examples.join(", ") : storyTitles;
+
+  const proficiencyLevel = metadata.proficiencyLevel || "Intermediate";
+  const seoKeywords = buildSeoKeywords(
+    primaryTheme,
+    targetLanguageFromTitle,
+    proficiencyLevel
+  );
+
   switch (type) {
     case "introduction":
-      return `Write an introduction for a language learning book titled "${metadata.title}" by ${metadata.author}. 
+      return `Write an introduction for a language learning book titled "${fullDisplayTitle}" by ${
+        metadata.author
+      }. 
 
-CRITICAL INSTRUCTION: Analyze the book title "${metadata.title}" to determine the target language. The book teaches the language mentioned in the title (e.g., if title contains "Spanish", teach Spanish; if "French", teach French; if "German", teach German, etc.). You MUST write about learning the language from the title, NOT English. English is only used for translations to help understand the target language.
+CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
 
-The book contains ${stories.length} stories in ${languageName}:
-${storyTitles}
+The book contains ${
+        stories.length
+      } stories in ${languageName}. Example story titles (not exhaustive): ${examplesText}
+
+Detected main theme: ${primaryTheme}. Related themes: ${themeSummary}.
+
+Audience level: ${proficiencyLevel}. Tailor tone and expectations to ${proficiencyLevel} learners.
+
+Include a short, compelling marketing hook and a concise list of SEO keywords relevant to the themes and ${targetLanguageFromTitle}. SEO Keywords: ${seoKeywords.join(
+        ", "
+      )}
 
 Follow this EXACT format structure:
 
-Start with "Welcome to ${metadata.title}!" and explain this book is a fun and friendly guide to learning the language mentioned in the title through simple stories designed for beginners. CRITICAL: Analyze the title to determine the target language. Stories are written in the target language with English translations for support. ALL language learning references must be about learning the target language from the title, NOT English. Mention who it's for and what makes it special. Describe the stories and their themes. Explain how they're crafted to be short and repetitive to help reinforce the target language vocabulary and grammar naturally. Mention what learners will achieve by the end in terms of the target language skills.
+Start with "Welcome to ${fullDisplayTitle}!" and explain this book is a fun and friendly guide to learning ${targetLanguageFromTitle} through simple stories designed for ${proficiencyLevel} learners. Stories are written in the target language with English translations for support. Mention who it's for and what makes it special. Describe the stories and their high-level themes (${themeSummary}). Explain how they're crafted with repetition to help reinforce ${targetLanguageFromTitle} vocabulary and grammar naturally. Mention what learners will achieve by the end in terms of ${targetLanguageFromTitle} skills.
 
 **What's in This Book?**
 Create a bulleted list with these exact items:
-· ${stories.length} Short Stories: Written in simple [target language from title] with English translations provided afterward for clarity. The stories feature the specific themes and topics from the provided stories.
-· Vocabulary Lists: Each story includes key [target language from title] words with pronunciation guides and English meanings to build your [target language from title] vocabulary effortlessly.
-· Comprehension Questions: Multiple-choice questions in [target language from title] and English follow each story to test your [target language from title] understanding, with answers provided to track your progress.
-· Illustration Prompts: Drawing prompts bring each story to life, perfect for learners.
+· ${
+        stories.length
+      } Short Stories: Written in accessible ${targetLanguageFromTitle} with English translations provided afterward for clarity. Themes include ${themeSummary}.
+· Vocabulary Lists: Each story includes key ${targetLanguageFromTitle} words with pronunciation guides and English meanings to build your ${targetLanguageFromTitle} vocabulary.
+· Comprehension Questions: Multiple-choice questions in ${targetLanguageFromTitle} and English follow each story to test your understanding, with answers provided.
+· Illustration Prompts: Drawing prompts bring each story to life.
 
 **Why This Book?**
 Create a bulleted list with these items:
-· Perfect for Beginners: Uses basic vocabulary and repetitive structures
-· Fun Themes: Stories revolve around the specific themes and topics from the provided stories
+· Right for ${proficiencyLevel}: Content matches ${proficiencyLevel} needs
+· Engaging Themes: Stories revolve around ${themeSummary}
 · Progressive Learning: Stories build on each other with repetition
-· No Grammar Stress: Learn naturally through stories, not rules
+· Learn Naturally: Acquire patterns through stories, not heavy rules
 
-End with "Perfect for beginners. Let's dive into the [specific theme from stories] magic and start your [target language from title] journey!" - replace [specific theme from stories] with the actual theme from the stories and [target language from title] with the language from the book title
+End with "Perfect for ${proficiencyLevel.toLowerCase()} learners. Let's dive into the ${primaryTheme} magic and start your ${targetLanguageFromTitle} journey!"
 
 Requirements:
 - Be written in ${languageName}
@@ -84,133 +393,140 @@ Requirements:
 - Make it engaging and encouraging
 - Ensure all bullet points are properly formatted with · symbol
 - Do not add any additional content outside this format
-- CRITICAL: Analyze the book title to determine the target language. Stories are written in the target language with English translations for support. All language learning references must be about learning the target language from the title
-- IMPORTANT: When you see [specific theme from stories] or similar placeholders, replace them with the actual themes from the provided stories (e.g., if stories are about Halloween, use "Halloween"; if about Christmas, use "Christmas", etc.)
-
-
-Generate content that matches this exact format while incorporating details from the provided stories.`;
+- CRITICAL: Analyze the book title and subtitle to determine the target language. All language learning references must be about learning ${targetLanguageFromTitle}
+`;
 
     case "howToUse":
-      return `Write a "How to Use This Book" section for a language learning book titled "${metadata.title}" by ${metadata.author}.
+      return `Write a "How to Use This Book" section for a language learning book titled "${fullDisplayTitle}" by ${metadata.author}.
 
-CRITICAL INSTRUCTION: Analyze the book title "${metadata.title}" to determine the target language. The book teaches the language mentioned in the title (e.g., if title contains "Spanish", teach Spanish; if "French", teach French; if "German", teach German, etc.). You MUST write about learning the language from the title, NOT English. English is only used for translations to help understand the target language.
+CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
 
-The book contains ${stories.length} stories in ${languageName}:
-${storyTitles}
+The book contains ${stories.length} stories in ${languageName}. Example story titles (not exhaustive): ${examplesText}
+
+Detected main theme: ${primaryTheme}. Related themes: ${themeSummary}.
+
+Audience level: ${proficiencyLevel}. Tailor instructions to ${proficiencyLevel} learners.
 
 Follow this EXACT format structure:
 
-Start with "This book is crafted to make learning [target language from title] fun, simple, and effective for beginners. Here's how to get the most out of ${metadata.title}:" and then create a bulleted list. IMPORTANT: Analyze the title to determine the target language. Stories are written in the target language with English translations for support. All references to language learning should be about learning the target language from the title.
+Start with "This book is crafted to make learning ${targetLanguageFromTitle} structured, engaging, and effective for ${proficiencyLevel} learners. Here's how to get the most out of ${fullDisplayTitle}:" and then create a bulleted list. Stories are written in the target language with English translations for support.
 
 **Main Instructions**
-· Read the Stories: Start with the [target language from title] version of each short story. The language is simple and repetitive to help you understand. Check the English translation afterward if you need clarity.
-· Learn Vocabulary: Each story comes with a list of new [target language from title] words, including pronunciation guides and English meanings. Read them in context, then try using them in your own sentences to make them stick.
-· Answer Questions: Test your comprehension with multiple-choice questions in [target language from title] and English. Check the provided answers to see your progress and revisit any tricky parts.
-· Practice Regularly: Aim for one or two stories daily. Re-read favorites, read aloud to practice pronunciation, or share with a friend or teacher for extra fun. Repetition builds confidence!
-· Get Creative with Illustrations: Use the illustration prompts to draw the scenes from the stories. This is great for learners or anyone who enjoys visualizing stories to enhance learning.
+· Read the Stories: Start with the ${targetLanguageFromTitle} version of each short story. The language is accessible with helpful repetition. Check the English translation afterward if you need clarity.
+· Learn Vocabulary: Each story includes ${targetLanguageFromTitle} words with pronunciation guides and English meanings. Read them in context, then use them in your own sentences.
+· Answer Questions: Test comprehension with multiple-choice questions in ${targetLanguageFromTitle} and English. Check the provided answers and revisit any tricky parts.
+· Practice Regularly: Aim for one or two stories daily. Re-read favorites, read aloud to practice pronunciation, or share with a partner or teacher.
+· Get Creative with Illustrations: Use the illustration prompts to draw scenes from the stories.
 
 **"Tips for Success:"**
 Create a bulleted list with these items:
-· Start Simple: Focus on the main idea of each story—don't worry about every word. Understanding grows with practice.
-· Take Your Time: If a story feels challenging, pause and re-read. Progress comes with patience.
-· Use a Notebook: Write down new words, phrases, or your thoughts about the stories to reinforce learning.
-· Involve Others: Read with a parent, teacher, or friend for support and to practice speaking.
-· Enjoy the Story Vibe: Let the themes and topics from the stories inspire you to keep exploring [target language from title]!
+· Focus on Meaning: Prioritize the main idea—precision grows with practice.
+· Pace Yourself: If a story feels challenging, pause and re-read.
+· Keep Notes: Write down new words, phrases, or reflections to reinforce learning.
+· Practice Speaking: Read with a friend or tutor to build fluency.
+· Enjoy the Themes: Let ${themeSummary} inspire you to keep exploring ${targetLanguageFromTitle}!
 
 **Closing Paragraph:**
-End with "With these steps, you'll find learning [target language from title] both fun and rewarding. [[target language from title] phrase meaning 'Happy reading!']"
+End with "With these steps, you'll find learning ${targetLanguageFromTitle} both motivating and rewarding at the ${proficiencyLevel} level. [${targetLanguageFromTitle} phrase meaning 'Happy reading!']"
 
 Requirements:
 - Be written in ${languageName}
 - Use the exact format structure provided
 - Include specific references to the actual stories and their themes
-- Make it instructional and encouraging
+- Make it instructional and supportive
 - Ensure all bullet points are properly formatted with · symbol
 - Do not add any additional content outside this format
-- CRITICAL: Analyze the book title to determine the target language. Stories are written in the target language with English translations for support. All language learning references must be about learning the target language from the title
-- IMPORTANT: When you see placeholders like [theme] or [specific themes], replace them with the actual themes from the provided stories
-
-
-Generate content that matches this exact format while incorporating details from the provided stories.`;
+- CRITICAL: Analyze the book title and subtitle to determine the target language. All language learning references must be about learning ${targetLanguageFromTitle}
+`;
 
     case "conclusion":
-      return `Write a conclusion for a language learning book titled "${metadata.title}" by ${metadata.author}.
+      return `Write a conclusion for a language learning book titled "${fullDisplayTitle}" by ${metadata.author}.
 
-CRITICAL INSTRUCTION: Analyze the book title "${metadata.title}" to determine the target language. The book teaches the language mentioned in the title (e.g., if title contains "Spanish", teach Spanish; if "French", teach French; if "German", teach German, etc.). You MUST write about learning the language from the title, NOT English. English is only used for translations to help understand the target language.
+CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
 
-The book contains ${stories.length} stories in ${languageName}:
-${storyTitles}
+The book contains ${stories.length} stories in ${languageName}. Example story titles (not exhaustive): ${examplesText}
+
+Detected main theme: ${primaryTheme}. Related themes: ${themeSummary}.
+
+Audience level: ${proficiencyLevel}. Match the closing tone to ${proficiencyLevel} learners.
 
 Follow this EXACT format structure:
 
-Start with "Congratulations on completing ${metadata.title}!" Express hope that the stories have made the learning journey exciting and memorable. Mention specific themes from the stories and how they helped build [target language from title] skills.
+Start with "Congratulations on completing ${fullDisplayTitle}!" Express hope that the stories have made the learning journey exciting and memorable. Mention specific high-level themes such as ${themeSummary} and how they helped build ${targetLanguageFromTitle} skills for ${proficiencyLevel} learners.
 
 "Your feedback means the world to us! Please share your thoughts by leaving a review on our website or wherever you purchased this book. Your input helps us create even better resources for learners like you."
 
-"Keep Learning: Use your new words in conversations, write your own mini-stories, or revisit these tales to keep the story spirit alive. Share them with friends or family for extra practice. Your [target language from title] adventure is just beginning—keep exploring with joy! [[target language from title] phrase meaning 'Thank you and happy learning!']"
+"Keep Learning: Use your new words in conversations, write your own mini-stories, or revisit these tales to keep the story spirit alive. Share them with friends or family for extra practice. Your ${targetLanguageFromTitle} adventure is just beginning—keep exploring with joy! [${targetLanguageFromTitle} phrase meaning 'Thank you and happy learning!']"
 
 Requirements:
 - Be written in ${languageName}
 - Use the exact format structure provided
 - Include specific references to the actual stories and their themes
 - Make it celebratory and encouraging
-- Use warm, congratulatory language
 - Include the exact phrases for feedback request and closing
 - Do not add any additional content outside this format
-- CRITICAL: Analyze the book title to determine the target language. Stories are written in the target language with English translations for support. All language learning references must be about learning the target language from the title
-- IMPORTANT: When you see placeholders like [theme] or [specific themes], replace them with the actual themes from the provided stories
-
-
-Generate content that matches this exact format while incorporating details from the provided stories.`;
+- CRITICAL: Analyze the book title and subtitle to determine the target language. All language learning references must be about learning ${targetLanguageFromTitle}
+`;
 
     case "description":
-      return `Write a book description for a language learning book titled "${metadata.title}" by ${metadata.author}.
+      return `Write a book description for a language learning book titled "${fullDisplayTitle}" by ${
+        metadata.author
+      }.
 
-CRITICAL INSTRUCTION: Analyze the book title "${metadata.title}" to determine the target language. The book teaches the language mentioned in the title (e.g., if title contains "Spanish", teach Spanish; if "French", teach French; if "German", teach German, etc.). You MUST write about learning the language from the title, NOT English. English is only used for translations to help understand the target language.
+CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
 
-The book contains ${stories.length} stories in ${languageName}:
-${storyTitles}
+The book contains ${
+        stories.length
+      } stories in ${languageName}. Example story titles (not exhaustive): ${examplesText}
+
+Detected main theme: ${primaryTheme}. Related themes: ${themeSummary}. Audience level: ${proficiencyLevel}.
 
 Follow this EXACT HTML structure using ONLY <p>, <b>, <i>, <br>, <ul>, <li> tags:
 
-<p><b>Tired of struggling with complex grammar or boring textbooks?</b><br><br>
-Learn [target language from title] in a delightful way!</p>
+<p><b>Looking for engaging ${targetLanguageFromTitle} practice without boring drills?</b><br><br>
+Level: ${proficiencyLevel}. Learn ${targetLanguageFromTitle} the enjoyable way!</p>
 
-<p>We believe learning a language should feel like diving into a magical story—fun, natural, and engaging. <i>${metadata.title}</i> is crafted for A1-level beginners, helping you build [target language from title] skills through ${stories.length} [specific theme from stories] yet heartwarming stories without heavy memorization.</p>
+<p>We believe learning a language should feel like diving into a magical story—fun, natural, and engaging. <i>${fullDisplayTitle}</i> is crafted for ${proficiencyLevel} learners, helping you build ${targetLanguageFromTitle} skills through ${
+        stories.length
+      } ${primaryTheme} stories without heavy memorization.</p>
 
-<p>By the end, you'll have a stronger grasp of basic [target language from title], a wider vocabulary, and confidence in reading short stories and answering questions.</p>
+<p>By the end, you'll have a stronger grasp of core ${targetLanguageFromTitle}, a wider vocabulary, and confidence in reading short stories and answering questions.</p>
 
 <p><b>Why This Book Is Perfect for You:</b></p>
 
 <ul>
-  <li><p><b>Learn [target language from title] Joyfully</b>: Skip tedious grammar drills—learn like kids do, through lively stories that feel magical.</p></li>
-  <li><p><b>${stories.length} Whimsical Stories</b>: Follow characters in [specific theme from stories] adventures like [create 2-3 specific examples based on the actual stories]—fun scenarios that spark imagination.</p></li>
-  <li><p><b>Tailored for A1 Beginners</b>: Each story uses simple, clear language, so you understand most of it instantly and absorb the rest naturally.</p></li>
-  <li><p><b>Progress with Ease</b>: Stories build gradually, making [target language from title] approachable. You'll be amazed at your progress from story 1 to story ${stories.length}!</p></li>
-  <li><p><b>[target language from title]-English Translations</b>: Read the [target language from title] version first, then check the English translation for clarity—no dictionary needed.</p></li>
-  <li><p><b>Enhance Reading Skills</b>: Stories boost comprehension naturally, helping you read with confidence step by step.</p></li>
-  <li><p><b>Expand Vocabulary Effortlessly</b>: Each story includes 10 key words with pronunciation guides and English meanings, making learning easy and contextual.</p></li>
-  <li><p><b>Master Everyday Phrases</b>: Learn practical expressions used by native speakers in fun, magical settings.</p></li>
-  <li><p><b>Bonus Illustration Prompts</b>: Minimalist doodle-style drawing ideas spark creativity and bring stories to life.</p></li>
+  <li><p><b>Learn ${targetLanguageFromTitle} Joyfully</b>: Skip tedious grammar drills—learn through lively, theme-rich stories.</p></li>
+  <li><p><b>${
+    stories.length
+  } Captivating Stories</b>: Follow characters in ${primaryTheme} adventures like ${examplesText}—scenarios that spark imagination.</p></li>
+  <li><p><b>Right for ${proficiencyLevel}</b>: Language and tasks suit ${proficiencyLevel} learners.</p></li>
+  <li><p><b>Progress with Ease</b>: Stories build gradually, making ${targetLanguageFromTitle} approachable from start to finish.</p></li>
+  <li><p><b>${targetLanguageFromTitle}-English Translations</b>: Read the ${targetLanguageFromTitle} version first, then check the English translation—no dictionary needed.</p></li>
+  <li><p><b>Enhance Reading Skills</b>: Improve comprehension naturally through repeated patterns and context.</p></li>
+  <li><p><b>Expand Vocabulary Effortlessly</b>: Each story includes 10 key words with pronunciation and English meanings.</p></li>
+  <li><p><b>Master Everyday Phrases</b>: Learn practical expressions used by native speakers in thematic settings.</p></li>
+  <li><p><b>Bonus Illustration Prompts</b>: Minimalist drawing ideas spark creativity and bring scenes to life.</p></li>
 </ul>
+
+<p><b>SEO Keywords</b>: ${seoKeywords.join(", ")}</p>
 
 <p><b>Get Started Now</b>: Scroll up and grab your copy!</p>
 
-<p><i>Note</i>: These stories focus on [specific theme from stories] adventures to build confidence. For extra practice, revisit vocabulary and questions after each story. With all ${stories.length} stories in one place, this book offers convenient, offline learning.</p>
+<p><i>Note</i>: These stories focus on ${primaryTheme} adventures to build confidence. For extra practice, revisit vocabulary and questions after each story. With all ${
+        stories.length
+      } stories in one place, this book offers convenient, offline learning.</p>
 
 Requirements:
 - Be written in ${languageName}
 - Use the exact format structure provided above
-- Include specific references to the actual stories and their themes
-- Make it engaging and encouraging
+- Include specific references to the actual stories and their themes (e.g., ${themeSummary})
+- Make it engaging and purchase-inspiring
 - Ensure all bullet points are properly formatted with · symbol
 - Do not add any additional content outside this format
-- CRITICAL: Analyze the book title to determine the target language. Stories are written in the target language with English translations for support. All language learning references must be about learning the target language from the title
-- IMPORTANT: When you see [specific theme from stories] or similar placeholders, replace them with the actual themes from the provided stories (e.g., if stories are about Halloween, use "Halloween"; if about Christmas, use "Christmas", etc.)
-- Create 2-3 specific adventure examples based on the actual story titles provided
+- CRITICAL: Analyze the book title and subtitle to determine the target language. All language learning references must be about learning ${targetLanguageFromTitle}
+- Create 2-3 specific adventure examples based on sample story titles provided
 - FORMAT: Return VALID HTML using ONLY <p>, <b>, <i>, <br>, <ul>, <li> tags. No markdown. Do NOT include wrapper tags like <html>, <head>, <body>.
-
-Generate content that matches this exact format while incorporating details from the provided stories.`;
+`;
 
     default:
       throw new Error(`Unknown generation type: ${type}`);
@@ -230,7 +546,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (
-      !["introduction", "howToUse", "conclusion", "description"].includes(type)
+      ["introduction", "howToUse", "conclusion", "description"].includes(
+        type
+      ) === false
     ) {
       return NextResponse.json(
         { error: "Invalid generation type" },
@@ -263,10 +581,8 @@ export async function POST(request: NextRequest) {
             method: "POST",
             headers: {
               Authorization: `Bearer ${apiKey}`,
-              "HTTP-Referer":
-                process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-              "X-Title":
-                process.env.NEXT_PUBLIC_SITE_NAME || "Storybook Generator",
+              "HTTP-Referer": "http://localhost:3000",
+              "X-Title": "Storybook Generator",
               "Content-Type": "application/json",
             },
             body: JSON.stringify({

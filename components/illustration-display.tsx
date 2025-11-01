@@ -15,6 +15,7 @@ interface IllustrationDisplayProps {
 export function IllustrationDisplay({ stories }: IllustrationDisplayProps) {
   const { toast } = useToast();
   const [copiedStoryId, setCopiedStoryId] = useState<number | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
 
   const storiesWithPrompts = stories.filter(
     (story) => story.illustrationPrompt && story.illustrationPrompt.trim()
@@ -42,6 +43,44 @@ export function IllustrationDisplay({ stories }: IllustrationDisplayProps) {
     }
   };
 
+  const handleCopyAllPrompts = async () => {
+    if (storiesWithPrompts.length === 0) {
+      toast({
+        title: "No prompts to copy",
+        description: "There are no illustration prompts available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const allPrompts = storiesWithPrompts
+        .map(
+          (story) =>
+            `Story ${story.number}: ${story.titleOriginal} (${story.titleTranslated})\n${story.illustrationPrompt}`
+        )
+        .join("\n\n---\n\n");
+
+      await navigator.clipboard.writeText(allPrompts);
+      setCopiedAll(true);
+      toast({
+        title: "Copied All!",
+        description: `All ${storiesWithPrompts.length} illustration prompts copied to clipboard.`,
+      });
+
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedAll(false);
+      }, 2000);
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy all illustration prompts to clipboard.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (storiesWithPrompts.length === 0) {
     return (
       <div className="flex h-full flex-col gap-4">
@@ -54,10 +93,22 @@ export function IllustrationDisplay({ stories }: IllustrationDisplayProps) {
               Display illustration prompts from stories
             </p>
           </div>
-          <Badge variant="outline" className="gap-1">
-            <Image className="h-3 w-3" />
-            {storiesWithPrompts.length} prompts
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="gap-1">
+              <Image className="h-3 w-3" />
+              {storiesWithPrompts.length} prompts
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyAllPrompts}
+              disabled={true}
+              className="gap-1"
+            >
+              <Copy className="h-3 w-3" />
+              Copy All
+            </Button>
+          </div>
         </div>
 
         <Card className="flex-1 flex items-center justify-center p-8">
@@ -87,10 +138,31 @@ export function IllustrationDisplay({ stories }: IllustrationDisplayProps) {
             Display illustration prompts from stories
           </p>
         </div>
-        <Badge variant="outline" className="gap-1">
-          <Image className="h-3 w-3" />
-          {storiesWithPrompts.length} prompts
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1">
+            <Image className="h-3 w-3" />
+            {storiesWithPrompts.length} prompts
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyAllPrompts}
+            disabled={storiesWithPrompts.length === 0}
+            className="gap-1"
+          >
+            {copiedAll ? (
+              <>
+                <Check className="h-3 w-3" />
+                Copied All
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                Copy All
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto space-y-4">

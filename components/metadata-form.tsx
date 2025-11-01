@@ -14,12 +14,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   CheckCircle2,
   X,
   Image as ImageIcon,
   Wand2,
   Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { SUPPORTED_LANGUAGES, CURRENT_YEAR } from "@/lib/constants";
 import { generateContent } from "@/lib/deepseek-generator";
@@ -56,6 +59,39 @@ export function MetadataForm({
     string | null
   >(null);
   const [generatingSections, setGeneratingSections] = useState<{
+    introduction: boolean;
+    howToUse: boolean;
+    conclusion: boolean;
+    description: boolean;
+  }>({
+    introduction: false,
+    howToUse: false,
+    conclusion: false,
+    description: false,
+  });
+  const [prompts, setPrompts] = useState<{
+    introduction: string | null;
+    howToUse: string | null;
+    conclusion: string | null;
+    description: string | null;
+  }>({
+    introduction: null,
+    howToUse: null,
+    conclusion: null,
+    description: null,
+  });
+  const [loadingPrompts, setLoadingPrompts] = useState<{
+    introduction: boolean;
+    howToUse: boolean;
+    conclusion: boolean;
+    description: boolean;
+  }>({
+    introduction: false,
+    howToUse: false,
+    conclusion: false,
+    description: false,
+  });
+  const [copiedStates, setCopiedStates] = useState<{
     introduction: boolean;
     howToUse: boolean;
     conclusion: boolean;
@@ -121,6 +157,106 @@ export function MetadataForm({
     if (fullPageImagePreview) {
       URL.revokeObjectURL(fullPageImagePreview);
       setFullPageImagePreview(null);
+    }
+  };
+
+  const handleFetchPrompt = async (
+    type: "introduction" | "howToUse" | "conclusion" | "description"
+  ) => {
+    if (!stories.length) {
+      toast({
+        title: "No Stories Available",
+        description: "Please add some stories before fetching prompt.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!metadata.title || !metadata.author) {
+      toast({
+        title: "Missing Information",
+        description:
+          "Please fill in the book title and author before fetching prompt.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingPrompts((prev) => ({ ...prev, [type]: true }));
+
+    try {
+      const response = await fetch("/api/deepseek/prompt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type,
+          stories,
+          metadata: {
+            title: metadata.title,
+            author: metadata.author,
+            language: metadata.language,
+            subtitle: undefined,
+            proficiencyLevel: "Intermediate" as const,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch prompt");
+      }
+
+      const data = await response.json();
+      if (data.success && data.prompt) {
+        setPrompts((prev) => ({ ...prev, [type]: data.prompt }));
+        toast({
+          title: "Prompt Fetched",
+          description: `Successfully loaded prompt for ${type}.`,
+        });
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Prompt fetch error:", error);
+      toast({
+        title: "Fetch Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred while fetching prompt.",
+        variant: "destructive",
+      });
+      setPrompts((prev) => ({ ...prev, [type]: null }));
+    } finally {
+      setLoadingPrompts((prev) => ({ ...prev, [type]: false }));
+    }
+  };
+
+  const handleCopyPrompt = async (
+    type: "introduction" | "howToUse" | "conclusion" | "description"
+  ) => {
+    const prompt = prompts[type];
+    if (!prompt) return;
+
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopiedStates((prev) => ({ ...prev, [type]: true }));
+      toast({
+        title: "Copied!",
+        description: "Prompt has been copied to clipboard.",
+      });
+      setTimeout(() => {
+        setCopiedStates((prev) => ({ ...prev, [type]: false }));
+      }, 2000);
+    } catch (error) {
+      console.error("Copy error:", error);
+      toast({
+        title: "Copy Failed",
+        description: "Failed to copy prompt to clipboard.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -553,6 +689,279 @@ export function MetadataForm({
               <p className="text-xs text-muted-foreground">
                 {metadata.description.length} characters
               </p>
+            </div>
+          </div>
+
+          {/* Prompt Display Section */}
+          <div className="space-y-4 border-t pt-4">
+            <h4 className="text-sm font-semibold text-foreground">
+              AI Prompt Preview
+            </h4>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {/* Introduction Prompt */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">Introduction</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleFetchPrompt("introduction")}
+                      disabled={
+                        loadingPrompts.introduction ||
+                        !stories.length ||
+                        !metadata.title ||
+                        !metadata.author
+                      }
+                      className="h-6 px-2 text-xs"
+                    >
+                      {loadingPrompts.introduction ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Wand2 className="h-3 w-3" />
+                      )}
+                    </Button>
+                    {prompts.introduction && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyPrompt("introduction")}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {copiedStates.introduction ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {loadingPrompts.introduction ? (
+                  <Card className="border-2">
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  </Card>
+                ) : prompts.introduction ? (
+                  <Card className="border-2">
+                    <ScrollArea className="h-[250px] w-full p-3">
+                      <pre className="whitespace-pre-wrap break-words text-xs font-mono text-foreground">
+                        {prompts.introduction}
+                      </pre>
+                    </ScrollArea>
+                  </Card>
+                ) : (
+                  <Card className="border-2 border-dashed">
+                    <div className="flex items-center justify-center py-8">
+                      <p className="text-xs text-muted-foreground text-center px-2">
+                        Click icon to load prompt
+                      </p>
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              {/* How to Use Prompt */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">How to Use</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleFetchPrompt("howToUse")}
+                      disabled={
+                        loadingPrompts.howToUse ||
+                        !stories.length ||
+                        !metadata.title ||
+                        !metadata.author
+                      }
+                      className="h-6 px-2 text-xs"
+                    >
+                      {loadingPrompts.howToUse ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Wand2 className="h-3 w-3" />
+                      )}
+                    </Button>
+                    {prompts.howToUse && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyPrompt("howToUse")}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {copiedStates.howToUse ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {loadingPrompts.howToUse ? (
+                  <Card className="border-2">
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  </Card>
+                ) : prompts.howToUse ? (
+                  <Card className="border-2">
+                    <ScrollArea className="h-[250px] w-full p-3">
+                      <pre className="whitespace-pre-wrap break-words text-xs font-mono text-foreground">
+                        {prompts.howToUse}
+                      </pre>
+                    </ScrollArea>
+                  </Card>
+                ) : (
+                  <Card className="border-2 border-dashed">
+                    <div className="flex items-center justify-center py-8">
+                      <p className="text-xs text-muted-foreground text-center px-2">
+                        Click icon to load prompt
+                      </p>
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              {/* Conclusion Prompt */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">Conclusion</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleFetchPrompt("conclusion")}
+                      disabled={
+                        loadingPrompts.conclusion ||
+                        !stories.length ||
+                        !metadata.title ||
+                        !metadata.author
+                      }
+                      className="h-6 px-2 text-xs"
+                    >
+                      {loadingPrompts.conclusion ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Wand2 className="h-3 w-3" />
+                      )}
+                    </Button>
+                    {prompts.conclusion && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyPrompt("conclusion")}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {copiedStates.conclusion ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {loadingPrompts.conclusion ? (
+                  <Card className="border-2">
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  </Card>
+                ) : prompts.conclusion ? (
+                  <Card className="border-2">
+                    <ScrollArea className="h-[250px] w-full p-3">
+                      <pre className="whitespace-pre-wrap break-words text-xs font-mono text-foreground">
+                        {prompts.conclusion}
+                      </pre>
+                    </ScrollArea>
+                  </Card>
+                ) : (
+                  <Card className="border-2 border-dashed">
+                    <div className="flex items-center justify-center py-8">
+                      <p className="text-xs text-muted-foreground text-center px-2">
+                        Click icon to load prompt
+                      </p>
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              {/* Description Prompt */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">Description</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleFetchPrompt("description")}
+                      disabled={
+                        loadingPrompts.description ||
+                        !stories.length ||
+                        !metadata.title ||
+                        !metadata.author
+                      }
+                      className="h-6 px-2 text-xs"
+                    >
+                      {loadingPrompts.description ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Wand2 className="h-3 w-3" />
+                      )}
+                    </Button>
+                    {prompts.description && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyPrompt("description")}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {copiedStates.description ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {loadingPrompts.description ? (
+                  <Card className="border-2">
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  </Card>
+                ) : prompts.description ? (
+                  <Card className="border-2">
+                    <ScrollArea className="h-[250px] w-full p-3">
+                      <pre className="whitespace-pre-wrap break-words text-xs font-mono text-foreground">
+                        {prompts.description}
+                      </pre>
+                    </ScrollArea>
+                  </Card>
+                ) : (
+                  <Card className="border-2 border-dashed">
+                    <div className="flex items-center justify-center py-8">
+                      <p className="text-xs text-muted-foreground text-center px-2">
+                        Click icon to load prompt
+                      </p>
+                    </div>
+                  </Card>
+                )}
+              </div>
             </div>
           </div>
         </div>
