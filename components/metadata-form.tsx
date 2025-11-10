@@ -104,6 +104,44 @@ export function MetadataForm({
   });
   const { toast } = useToast();
 
+  const extractProficiencyLevel = (
+    title: string
+  ): "Beginner" | "Intermediate" | "Advanced" => {
+    const titleLower = title.toLowerCase();
+
+    // Check for "Advanced" first (more specific)
+    if (
+      titleLower.includes("advanced") ||
+      titleLower.includes("expert") ||
+      titleLower.includes("fluent")
+    ) {
+      return "Advanced";
+    }
+
+    // Check for "Beginner"
+    if (
+      titleLower.includes("beginner") ||
+      titleLower.includes("starter") ||
+      titleLower.includes("elementary") ||
+      titleLower.includes("basic")
+    ) {
+      return "Beginner";
+    }
+
+    // Check for "Intermediate"
+    if (
+      titleLower.includes("intermediate") ||
+      titleLower.includes("medium") ||
+      titleLower.includes("level 2") ||
+      titleLower.includes("level 3")
+    ) {
+      return "Intermediate";
+    }
+
+    // Default to Intermediate if no match found
+    return "Intermediate";
+  };
+
   useEffect(() => {
     if (initialMetadata) {
       setMetadata(initialMetadata);
@@ -198,7 +236,7 @@ export function MetadataForm({
             author: metadata.author,
             language: metadata.language,
             subtitle: undefined,
-            proficiencyLevel: "Intermediate" as const,
+            proficiencyLevel: extractProficiencyLevel(metadata.title),
           },
         }),
       });

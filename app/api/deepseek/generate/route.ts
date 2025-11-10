@@ -338,6 +338,7 @@ export const generatePrompt = (
   const examplesText = examples.length ? examples.join(", ") : storyTitles;
 
   const proficiencyLevel = metadata.proficiencyLevel || "Intermediate";
+
   const seoKeywords = buildSeoKeywords(
     primaryTheme,
     targetLanguageFromTitle,
@@ -346,186 +347,180 @@ export const generatePrompt = (
 
   switch (type) {
     case "introduction":
-      return `Write an introduction for a language learning book titled "${fullDisplayTitle}" by ${
-        metadata.author
-      }. 
-
-CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
-
-The book contains ${
-        stories.length
-      } stories in ${languageName}. Example story titles (not exhaustive): ${examplesText}
-
-Detected main theme: ${primaryTheme}. Related themes: ${themeSummary}.
-
-Audience level: ${proficiencyLevel}. Tailor tone and expectations to ${proficiencyLevel} learners.
-
-Include a short, compelling marketing hook and a concise list of SEO keywords relevant to the themes and ${targetLanguageFromTitle}. SEO Keywords: ${seoKeywords.join(
-        ", "
-      )}
-
-Follow this EXACT format structure:
-
-Start with "Welcome to ${fullDisplayTitle}!" and explain this book is a fun and friendly guide to learning ${targetLanguageFromTitle} through simple stories designed for ${proficiencyLevel} learners. Stories are written in the target language with English translations for support. Mention who it's for and what makes it special. Describe the stories and their high-level themes (${themeSummary}). Explain how they're crafted with repetition to help reinforce ${targetLanguageFromTitle} vocabulary and grammar naturally. Mention what learners will achieve by the end in terms of ${targetLanguageFromTitle} skills.
-
-**What's in This Book?**
-Create a bulleted list with these exact items:
-· ${
-        stories.length
-      } Short Stories: Written in accessible ${targetLanguageFromTitle} with English translations provided afterward for clarity. Themes include ${themeSummary}.
-· Vocabulary Lists: Each story includes key ${targetLanguageFromTitle} words with pronunciation guides and English meanings to build your ${targetLanguageFromTitle} vocabulary.
-· Comprehension Questions: Multiple-choice questions in ${targetLanguageFromTitle} and English follow each story to test your understanding, with answers provided.
-· Illustration Prompts: Drawing prompts bring each story to life.
-
-**Why This Book?**
-Create a bulleted list with these items:
-· Right for ${proficiencyLevel}: Content matches ${proficiencyLevel} needs
-· Engaging Themes: Stories revolve around ${themeSummary}
-· Progressive Learning: Stories build on each other with repetition
-· Learn Naturally: Acquire patterns through stories, not heavy rules
-
-End with "Perfect for ${proficiencyLevel.toLowerCase()} learners. Let's dive into the ${primaryTheme} magic and start your ${targetLanguageFromTitle} journey!"
-
-Requirements:
-- Be written in ${languageName}
-- Use the exact format structure provided
-- Include specific references to the actual stories and their themes
-- Make it engaging and encouraging
-- Ensure all bullet points are properly formatted with · symbol
-- Do not add any additional content outside this format
-- CRITICAL: Analyze the book title and subtitle to determine the target language. All language learning references must be about learning ${targetLanguageFromTitle}
-`;
-
-    case "howToUse":
-      return `Write a "How to Use This Book" section for a language learning book titled "${fullDisplayTitle}" by ${metadata.author}.
-
-CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
-
-The book contains ${stories.length} stories in ${languageName}. Example story titles (not exhaustive): ${examplesText}
-
-Detected main theme: ${primaryTheme}. Related themes: ${themeSummary}.
-
-Audience level: ${proficiencyLevel}. Tailor instructions to ${proficiencyLevel} learners.
-
-Follow this EXACT format structure:
-
-Start with "This book is crafted to make learning ${targetLanguageFromTitle} structured, engaging, and effective for ${proficiencyLevel} learners. Here's how to get the most out of ${fullDisplayTitle}:" and then create a bulleted list. Stories are written in the target language with English translations for support.
-
-**Main Instructions**
-· Read the Stories: Start with the ${targetLanguageFromTitle} version of each short story. The language is accessible with helpful repetition. Check the English translation afterward if you need clarity.
-· Learn Vocabulary: Each story includes ${targetLanguageFromTitle} words with pronunciation guides and English meanings. Read them in context, then use them in your own sentences.
-· Answer Questions: Test comprehension with multiple-choice questions in ${targetLanguageFromTitle} and English. Check the provided answers and revisit any tricky parts.
-· Practice Regularly: Aim for one or two stories daily. Re-read favorites, read aloud to practice pronunciation, or share with a partner or teacher.
-· Get Creative with Illustrations: Use the illustration prompts to draw scenes from the stories.
-
-**"Tips for Success:"**
-Create a bulleted list with these items:
-· Focus on Meaning: Prioritize the main idea—precision grows with practice.
-· Pace Yourself: If a story feels challenging, pause and re-read.
-· Keep Notes: Write down new words, phrases, or reflections to reinforce learning.
-· Practice Speaking: Read with a friend or tutor to build fluency.
-· Enjoy the Themes: Let ${themeSummary} inspire you to keep exploring ${targetLanguageFromTitle}!
-
-**Closing Paragraph:**
-End with "With these steps, you'll find learning ${targetLanguageFromTitle} both motivating and rewarding at the ${proficiencyLevel} level. [${targetLanguageFromTitle} phrase meaning 'Happy reading!']"
-
-Requirements:
-- Be written in ${languageName}
-- Use the exact format structure provided
-- Include specific references to the actual stories and their themes
-- Make it instructional and supportive
-- Ensure all bullet points are properly formatted with · symbol
-- Do not add any additional content outside this format
-- CRITICAL: Analyze the book title and subtitle to determine the target language. All language learning references must be about learning ${targetLanguageFromTitle}
-`;
-
-    case "conclusion":
-      return `Write a conclusion for a language learning book titled "${fullDisplayTitle}" by ${metadata.author}.
-
-CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
-
-The book contains ${stories.length} stories in ${languageName}. Example story titles (not exhaustive): ${examplesText}
-
-Detected main theme: ${primaryTheme}. Related themes: ${themeSummary}.
-
-Audience level: ${proficiencyLevel}. Match the closing tone to ${proficiencyLevel} learners.
-
-Follow this EXACT format structure:
-
-Start with "Congratulations on completing ${fullDisplayTitle}!" Express hope that the stories have made the learning journey exciting and memorable. Mention specific high-level themes such as ${themeSummary} and how they helped build ${targetLanguageFromTitle} skills for ${proficiencyLevel} learners.
-
-"Your feedback means the world to us! Please share your thoughts by leaving a review on our website or wherever you purchased this book. Your input helps us create even better resources for learners like you."
-
-"Keep Learning: Use your new words in conversations, write your own mini-stories, or revisit these tales to keep the story spirit alive. Share them with friends or family for extra practice. Your ${targetLanguageFromTitle} adventure is just beginning—keep exploring with joy! [${targetLanguageFromTitle} phrase meaning 'Thank you and happy learning!']"
-
-Requirements:
-- Be written in ${languageName}
-- Use the exact format structure provided
-- Include specific references to the actual stories and their themes
-- Make it celebratory and encouraging
-- Include the exact phrases for feedback request and closing
-- Do not add any additional content outside this format
-- CRITICAL: Analyze the book title and subtitle to determine the target language. All language learning references must be about learning ${targetLanguageFromTitle}
-`;
-
-    case "description":
-      return `Write a book description for a language learning book titled "${fullDisplayTitle}" by ${
+      return `Write an engaging introduction for a language learning book titled "${fullDisplayTitle}" by ${
         metadata.author
       }.
 
 CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
 
-The book contains ${
-        stories.length
-      } stories in ${languageName}. Example story titles (not exhaustive): ${examplesText}
+Context:
+- The book contains ${stories.length} stories in ${languageName}
+- Example story titles: ${examplesText}
+- Main theme: ${primaryTheme}
+- Related themes: ${themeSummary}
+- Target audience: ${proficiencyLevel} learners
+- SEO Keywords to incorporate naturally: ${seoKeywords.join(", ")}
 
-Detected main theme: ${primaryTheme}. Related themes: ${themeSummary}. Audience level: ${proficiencyLevel}.
+Structure Guidelines (be creative with wording while maintaining these elements):
 
-Follow this EXACT HTML structure using ONLY <p>, <b>, <i>, <br>, <ul>, <li> tags:
+1. Opening: Start with a warm, welcoming greeting that mentions "${fullDisplayTitle}". Introduce the book as a guide for learning ${targetLanguageFromTitle} through stories designed for ${proficiencyLevel} learners. Explain that stories are in ${targetLanguageFromTitle} with English translations for support.
 
-<p><b>Looking for engaging ${targetLanguageFromTitle} practice without boring drills?</b><br><br>
-Level: ${proficiencyLevel}. Learn ${targetLanguageFromTitle} the enjoyable way!</p>
+2. Book Overview: Describe what makes this book special. Mention the ${primaryTheme} theme and related themes (${themeSummary}). Explain how the stories use repetition to naturally reinforce ${targetLanguageFromTitle} vocabulary and grammar. Highlight what learners will achieve by the end.
 
-<p>We believe learning a language should feel like diving into a magical story—fun, natural, and engaging. <i>${fullDisplayTitle}</i> is crafted for ${proficiencyLevel} learners, helping you build ${targetLanguageFromTitle} skills through ${
-        stories.length
-      } ${primaryTheme} stories without heavy memorization.</p>
+3. What's in This Book: Include a section (with heading) that lists:
+   - ${
+     stories.length
+   } short stories in accessible ${targetLanguageFromTitle} with English translations
+   - Vocabulary lists with pronunciation guides and meanings
+   - Comprehension questions in both languages with answers
+   - Illustration prompts for creative engagement
 
-<p>By the end, you'll have a stronger grasp of core ${targetLanguageFromTitle}, a wider vocabulary, and confidence in reading short stories and answering questions.</p>
+4. Why This Book: Include a section highlighting:
+   - Appropriate for ${proficiencyLevel} level learners
+   - Engaging ${themeSummary} themes
+   - Progressive learning through story repetition
+   - Natural language acquisition approach
 
-<p><b>Why This Book Is Perfect for You:</b></p>
-
-<ul>
-  <li><p><b>Learn ${targetLanguageFromTitle} Joyfully</b>: Skip tedious grammar drills—learn through lively, theme-rich stories.</p></li>
-  <li><p><b>${
-    stories.length
-  } Captivating Stories</b>: Follow characters in ${primaryTheme} adventures like ${examplesText}—scenarios that spark imagination.</p></li>
-  <li><p><b>Right for ${proficiencyLevel}</b>: Language and tasks suit ${proficiencyLevel} learners.</p></li>
-  <li><p><b>Progress with Ease</b>: Stories build gradually, making ${targetLanguageFromTitle} approachable from start to finish.</p></li>
-  <li><p><b>${targetLanguageFromTitle}-English Translations</b>: Read the ${targetLanguageFromTitle} version first, then check the English translation—no dictionary needed.</p></li>
-  <li><p><b>Enhance Reading Skills</b>: Improve comprehension naturally through repeated patterns and context.</p></li>
-  <li><p><b>Expand Vocabulary Effortlessly</b>: Each story includes 10 key words with pronunciation and English meanings.</p></li>
-  <li><p><b>Master Everyday Phrases</b>: Learn practical expressions used by native speakers in thematic settings.</p></li>
-  <li><p><b>Bonus Illustration Prompts</b>: Minimalist drawing ideas spark creativity and bring scenes to life.</p></li>
-</ul>
-
-<p><b>SEO Keywords</b>: ${seoKeywords.join(", ")}</p>
-
-<p><b>Get Started Now</b>: Scroll up and grab your copy!</p>
-
-<p><i>Note</i>: These stories focus on ${primaryTheme} adventures to build confidence. For extra practice, revisit vocabulary and questions after each story. With all ${
-        stories.length
-      } stories in one place, this book offers convenient, offline learning.</p>
+5. Closing: End with an encouraging message inviting ${proficiencyLevel.toLowerCase()} learners to begin their ${targetLanguageFromTitle} journey through ${primaryTheme} stories.
 
 Requirements:
-- Be written in ${languageName}
-- Use the exact format structure provided above
-- Include specific references to the actual stories and their themes (e.g., ${themeSummary})
-- Make it engaging and purchase-inspiring
-- Ensure all bullet points are properly formatted with · symbol
-- Do not add any additional content outside this format
-- CRITICAL: Analyze the book title and subtitle to determine the target language. All language learning references must be about learning ${targetLanguageFromTitle}
-- Create 2-3 specific adventure examples based on sample story titles provided
-- FORMAT: Return VALID HTML using ONLY <p>, <b>, <i>, <br>, <ul>, <li> tags. No markdown. Do NOT include wrapper tags like <html>, <head>, <body>.
+- Write in ${languageName}
+- Be engaging, encouraging, and welcoming
+- Include specific references to the stories and themes
+- Use natural, varied language (avoid repetitive phrasing)
+- Format bullet points clearly (· or - symbol)
+- Maintain focus on learning ${targetLanguageFromTitle}, not English
+- Incorporate SEO keywords naturally throughout
+`;
+
+    case "howToUse":
+      return `Write a helpful "How to Use This Book" section for a language learning book titled "${fullDisplayTitle}" by ${metadata.author}.
+
+CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
+
+Context:
+- The book contains ${stories.length} stories in ${languageName}
+- Example story titles: ${examplesText}
+- Main theme: ${primaryTheme}
+- Related themes: ${themeSummary}
+- Target audience: ${proficiencyLevel} learners
+
+Structure Guidelines (adapt wording naturally while covering these areas):
+
+1. Opening: Introduce how the book is designed to make learning ${targetLanguageFromTitle} structured, engaging, and effective for ${proficiencyLevel} learners. Explain that stories are in ${targetLanguageFromTitle} with English translations for support.
+
+2. Main Instructions: Provide clear, practical guidance on:
+   - Reading approach: Start with ${targetLanguageFromTitle} version, use English translation for clarity
+   - Vocabulary learning: How to use the pronunciation guides and meanings effectively
+   - Comprehension practice: Using the questions to test understanding
+   - Regular practice: Suggested frequency and methods (reading aloud, sharing with others)
+   - Creative engagement: Using illustration prompts
+
+3. Tips for Success: Include practical advice such as:
+   - Focusing on understanding main ideas first
+   - Pacing yourself appropriately
+   - Keeping notes for reinforcement
+   - Practicing speaking with others
+   - Enjoying the ${themeSummary} themes to stay motivated
+
+4. Closing: End with an encouraging message about the learning journey at the ${proficiencyLevel} level. Include a ${targetLanguageFromTitle} phrase meaning "Happy reading!" or similar encouragement.
+
+Requirements:
+- Write in ${languageName}
+- Be instructional, supportive, and clear
+- Reference the actual stories and themes naturally
+- Use varied, natural language
+- Format instructions and tips clearly
+- Maintain focus on learning ${targetLanguageFromTitle}
+- Adapt tone to ${proficiencyLevel} learners' needs
+`;
+
+    case "conclusion":
+      return `Write a warm, celebratory conclusion for a language learning book titled "${fullDisplayTitle}" by ${metadata.author}.
+
+CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
+
+Context:
+- The book contains ${stories.length} stories in ${languageName}
+- Example story titles: ${examplesText}
+- Main theme: ${primaryTheme}
+- Related themes: ${themeSummary}
+- Target audience: ${proficiencyLevel} learners
+
+Structure Guidelines (vary your expression while including these elements):
+
+1. Celebration: Congratulate readers on completing the book. Express how the ${themeSummary} stories have made their ${targetLanguageFromTitle} learning journey exciting and memorable. Highlight how these themes helped build skills appropriate for ${proficiencyLevel} learners.
+
+2. Feedback Request: Politely ask readers to share their thoughts through reviews. Mention that their feedback helps create better resources for learners. (Express this naturally, not word-for-word.)
+
+3. Continued Learning: Encourage readers to:
+   - Use new ${targetLanguageFromTitle} words in conversations
+   - Write their own mini-stories
+   - Revisit the stories for practice
+   - Share with friends or family
+   - Continue their ${targetLanguageFromTitle} learning adventure
+
+4. Closing: End with a ${targetLanguageFromTitle} phrase meaning "Thank you and happy learning!" or similar encouraging message.
+
+Requirements:
+- Write in ${languageName}
+- Be celebratory, warm, and encouraging
+- Reference the stories and themes naturally
+- Use varied, heartfelt language
+- Maintain focus on learning ${targetLanguageFromTitle}
+- Match tone to ${proficiencyLevel} learners
+- Include feedback request and continued learning encouragement
+`;
+
+    case "description":
+      return `Write a compelling book description for a language learning book titled "${fullDisplayTitle}" by ${
+        metadata.author
+      }.
+
+CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
+
+Context:
+- The book contains ${stories.length} stories in ${languageName}
+- Example story titles: ${examplesText}
+- Main theme: ${primaryTheme}
+- Related themes: ${themeSummary}
+- Target audience: ${proficiencyLevel} learners
+- SEO Keywords to incorporate: ${seoKeywords.join(", ")}
+
+Structure Guidelines (use HTML with ONLY <p>, <b>, <i>, <br>, <ul>, <li> tags):
+
+1. Hook: Open with an engaging question or statement that highlights learning ${targetLanguageFromTitle} in an enjoyable way. Mention the ${proficiencyLevel} level.
+
+2. Value Proposition: Explain how the book makes learning ${targetLanguageFromTitle} fun, natural, and engaging through ${primaryTheme} stories. Emphasize it's designed for ${proficiencyLevel} learners and avoids heavy memorization.
+
+3. Learning Outcomes: Describe what readers will achieve—stronger ${targetLanguageFromTitle} skills, expanded vocabulary, and reading confidence.
+
+4. Key Features: Create a "Why This Book Is Perfect for You" section with a bulleted list covering:
+   - Learning ${targetLanguageFromTitle} through engaging stories (not drills)
+   - ${
+     stories.length
+   } captivating ${primaryTheme} stories with examples from actual titles
+   - Appropriate for ${proficiencyLevel} level
+   - Progressive difficulty
+   - ${targetLanguageFromTitle}-English translations
+   - Reading comprehension improvement
+   - Vocabulary expansion with pronunciation guides
+   - Practical phrases for everyday use
+   - Illustration prompts for creativity
+
+5. SEO & Call to Action: Naturally incorporate SEO keywords. Include a call-to-action encouraging purchase.
+
+6. Note: Add a brief note about the ${primaryTheme} focus, practice suggestions, and the convenience of having all stories in one place.
+
+Requirements:
+- Write in ${languageName}
+- Use ONLY <p>, <b>, <i>, <br>, <ul>, <li> HTML tags (no markdown, no wrapper tags)
+- Be engaging and purchase-inspiring
+- Reference actual stories and themes naturally
+- Vary language and phrasing
+- Include 2-3 specific adventure examples based on story titles
+- Maintain focus on learning ${targetLanguageFromTitle}
+- Format bullet points clearly
 `;
 
     default:
