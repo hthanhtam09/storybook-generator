@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ExportButton } from "@/components/export-button";
 import type { Story, BookMetadata, ImageFile, TemplateFile } from "@/lib/types";
 
@@ -29,9 +29,6 @@ export function PreviewPanel({
   const [fullImagePreview, setFullImagePreview] = useState<string | null>(null);
 
   const canExport = stories.length > 0 && metadata !== null;
-
-  const zoomIn = () => setZoom((prev) => Math.min(prev + 25, 150));
-  const zoomOut = () => setZoom((prev) => Math.max(prev - 25, 50));
 
   useEffect(() => {
     if (metadata?.fullPageImage) {
@@ -66,28 +63,6 @@ export function PreviewPanel({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={zoomOut}
-              disabled={zoom <= 50}
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <span className="min-w-[3rem] text-center text-xs text-muted-foreground">
-              {zoom}%
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={zoomIn}
-              disabled={zoom >= 150}
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <div className="mx-2 h-4 w-px bg-border" />
             <ExportButton
               stories={stories}
               metadata={metadata}

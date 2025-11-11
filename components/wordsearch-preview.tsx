@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ZoomIn, ZoomOut, Download, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { WordSearchGenerator } from "@/lib/wordsearch";
 import type { WordSearchConfig } from "@/lib/wordsearch-config";
 
@@ -20,11 +20,10 @@ export function WordSearchPreview({
   const [zoom, setZoom] = useState(100);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [previewGrid, setPreviewGrid] = useState<any>(null);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const [autoScale, setAutoScale] = useState(100);
 
   const canExport = config.words.length > 0;
-
-  const zoomIn = () => setZoom((prev) => Math.min(prev + 25, 150));
-  const zoomOut = () => setZoom((prev) => Math.max(prev - 25, 50));
 
   // Generate preview grid when config changes
   React.useEffect(() => {
@@ -43,13 +42,51 @@ export function WordSearchPreview({
     }
   }, [config]);
 
+  // Calculate auto-scale based on container width
+  useEffect(() => {
+    if (!previewGrid || !gridContainerRef.current) return;
+
+    const calculateAutoScale = () => {
+      const container = gridContainerRef.current;
+      if (!container) return;
+
+      // Cell size: 56px (w-14), gap: 4px (gap-1), padding: 16px (p-4) each side
+      const cellSize = 56;
+      const gap = 4;
+      const padding = 16;
+      const gridSize = previewGrid.size;
+
+      // Calculate grid width
+      const gridWidth =
+        gridSize * cellSize + (gridSize - 1) * gap + padding * 2;
+
+      // Available width: container width (already accounts for parent padding)
+      const availableWidth = container.clientWidth;
+
+      if (gridWidth > availableWidth && availableWidth > 0) {
+        const scale = (availableWidth / gridWidth) * 100;
+        setAutoScale(Math.min(scale, 100)); // Don't scale up, only down
+      } else {
+        setAutoScale(100);
+      }
+    };
+
+    // Use setTimeout to ensure DOM is ready
+    const timeoutId = setTimeout(calculateAutoScale, 0);
+    window.addEventListener("resize", calculateAutoScale);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", calculateAutoScale);
+    };
+  }, [previewGrid]);
+
   const generatePDF = async () => {
     if (!canExport) return;
 
     setIsGeneratingPDF(true);
 
     try {
-      const response = await fetch("/api/generate-pdf", {
+      const response = await fetch("/api/wordsearch/generate-pdf", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -90,23 +127,17 @@ export function WordSearchPreview({
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              onClick={generatePDF}
               size="sm"
-              onClick={zoomOut}
-              disabled={zoom <= 50}
+              disabled={!canExport || isGeneratingPDF}
+              className="flex items-center gap-2 ml-2"
             >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <span className="text-sm text-muted-foreground min-w-[3rem] text-center">
-              {zoom}%
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={zoomIn}
-              disabled={zoom >= 150}
-            >
-              <ZoomIn className="h-4 w-4" />
+              {isGeneratingPDF ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isGeneratingPDF ? "Generating..." : "Export PDF"}
             </Button>
           </div>
         </div>
@@ -138,6 +169,10 @@ export function WordSearchPreview({
                     {config.words.length}
                   </div>
                   <div>
+                    <span className="font-medium">Topics:</span>{" "}
+                    {config.topics?.length || 0}
+                  </div>
+                  <div>
                     <span className="font-medium">Grid Size:</span>{" "}
                     {config.gridSize}x{config.gridSize}
                   </div>
@@ -158,6 +193,18 @@ export function WordSearchPreview({
                     {config.wordsPerPage}
                   </div>
                 </div>
+                {config.topics && config.topics.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="font-medium mb-2">Topics:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {config.topics.map((topic, index) => (
+                        <Badge key={index} variant="outline">
+                          {topic.topic} ({topic.words.length})
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -181,101 +228,6 @@ export function WordSearchPreview({
                 </div>
               </Card>
             )}
-
-            {/* Grid Preview */}
-            {previewGrid && (
-              <Card>
-                <div className="p-4">
-                  <h3 className="mb-3 text-lg font-semibold">Grid Preview</h3>
-                  <div className="flex justify-center">
-                    <div
-                      className="grid gap-1 p-4 border rounded-lg bg-background"
-                      style={{
-                        gridTemplateColumns: `repeat(${previewGrid.size}, 1fr)`,
-                        transform: `scale(${zoom / 100})`,
-                        transformOrigin: "center",
-                      }}
-                    >
-                      {previewGrid.grid.map((row: string[], rowIndex: number) =>
-                        row.map((letter: string, colIndex: number) => {
-                          const isAnswerCell = previewGrid.words.some(
-                            (wordPos: any) => {
-                              const { startRow, startCol, endRow, endCol } =
-                                wordPos;
-                              const rowStep =
-                                endRow > startRow
-                                  ? 1
-                                  : endRow < startRow
-                                  ? -1
-                                  : 0;
-                              const colStep =
-                                endCol > startCol
-                                  ? 1
-                                  : endCol < startCol
-                                  ? -1
-                                  : 0;
-
-                              let currentRow = startRow;
-                              let currentCol = startCol;
-
-                              while (true) {
-                                if (
-                                  currentRow === rowIndex &&
-                                  currentCol === colIndex
-                                ) {
-                                  return true;
-                                }
-                                if (
-                                  currentRow === endRow &&
-                                  currentCol === endCol
-                                )
-                                  break;
-                                currentRow += rowStep;
-                                currentCol += colStep;
-                              }
-                              return false;
-                            }
-                          );
-
-                          return (
-                            <div
-                              key={`${rowIndex}-${colIndex}`}
-                              className={`
-                                w-8 h-8 flex items-center justify-center text-sm font-bold border
-                                ${
-                                  isAnswerCell && config.showAnswersInGrid
-                                    ? "bg-primary/20 text-primary"
-                                    : "bg-background text-foreground"
-                                }
-                              `}
-                            >
-                              {letter.toUpperCase()}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* Export Button */}
-            <div className="flex justify-center">
-              <Button
-                onClick={generatePDF}
-                size="lg"
-                disabled={!canExport || isGeneratingPDF}
-                className="flex items-center gap-2"
-              >
-                {isGeneratingPDF ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Download className="h-5 w-5" />
-                )}
-                {isGeneratingPDF ? "Generating PDF..." : "Generate PDF"}
-              </Button>
-            </div>
           </div>
         )}
       </div>

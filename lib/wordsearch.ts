@@ -184,35 +184,43 @@ export class WordSearchGenerator {
   ): WordSearchGrid[] {
     const grids: WordSearchGrid[] = [];
 
-    if (distributeWords && wordsPerPage) {
-      // Distribute unique words across pages
-      const wordsPerGrid = Math.min(wordsPerPage, words.length);
-      const totalUniqueWordsAvailable = words.length;
-      const maxPagesWithUniqueWords = Math.ceil(
-        totalUniqueWordsAvailable / wordsPerPage
+    // Always distribute unique words across pages - each word appears only once
+    const totalUniqueWordsAvailable = words.length;
+    
+    // Calculate words per page if not provided
+    const calculatedWordsPerPage = wordsPerPage || Math.ceil(totalUniqueWordsAvailable / pageCount);
+    const wordsPerGrid = Math.min(calculatedWordsPerPage, words.length);
+    
+    // Calculate maximum pages we can create with unique words
+    const maxPagesWithUniqueWords = Math.ceil(
+      totalUniqueWordsAvailable / wordsPerGrid
+    );
+
+    // Only create as many pages as we can with unique words
+    const actualPageCount = Math.min(pageCount, maxPagesWithUniqueWords);
+
+    // Track which words have been used
+    let usedWordIndex = 0;
+
+    // Create grids with unique distributed words
+    for (let page = 0; page < actualPageCount; page++) {
+      // Calculate how many words for this page
+      const remainingWords = totalUniqueWordsAvailable - usedWordIndex;
+      const wordsForThisPageCount = Math.min(wordsPerGrid, remainingWords);
+      
+      // Get words for this page (each word only appears once)
+      const wordsForThisPage = words.slice(
+        usedWordIndex,
+        usedWordIndex + wordsForThisPageCount
       );
 
-      // Only create as many pages as we can with unique words
-      const actualPageCount = Math.min(pageCount, maxPagesWithUniqueWords);
+      // Move to next set of words
+      usedWordIndex += wordsForThisPageCount;
 
-      // Create grids with unique distributed words
-      for (let page = 0; page < actualPageCount; page++) {
-        const startIndex = page * wordsPerGrid;
-        const endIndex = Math.min(
-          startIndex + wordsPerGrid,
-          totalUniqueWordsAvailable
-        );
-        const wordsForThisPage = words.slice(startIndex, endIndex);
-
+      // Only create grid if we have words
+      if (wordsForThisPage.length > 0) {
         const generator = new WordSearchGenerator(allowDiagonal, allowBackward);
         const grid = generator.generate(wordsForThisPage, gridSize);
-        grids.push(grid);
-      }
-    } else {
-      // Repeat all words on every page
-      for (let i = 0; i < pageCount; i++) {
-        const generator = new WordSearchGenerator(allowDiagonal, allowBackward);
-        const grid = generator.generate(words, gridSize);
         grids.push(grid);
       }
     }

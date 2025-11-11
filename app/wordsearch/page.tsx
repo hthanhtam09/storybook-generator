@@ -10,17 +10,20 @@ import type { WordSearchConfig } from "@/lib/wordsearch-config";
 export default function WordSearchPage() {
   const [config, setConfig] = useState<WordSearchConfig>({
     words: [],
+    topics: [],
     gridSize: 15,
     difficulty: "medium",
     language: "en",
     theme: "classic",
+    template: "diwali",
     showWordList: true,
     allowDiagonal: true,
-    allowBackward: false,
+    allowBackward: true,
     pageCount: 1,
     wordsPerPage: 10,
     distributeWords: true,
     showAnswersInGrid: false,
+    images: [],
   });
 
   const handleConfigChange = (newConfig: WordSearchConfig) => {
