@@ -163,36 +163,6 @@ export function WordSearchPreview({
             <Card>
               <div className="p-4">
                 <h3 className="mb-3 text-lg font-semibold">Configuration</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Words:</span>{" "}
-                    {config.words.length}
-                  </div>
-                  <div>
-                    <span className="font-medium">Topics:</span>{" "}
-                    {config.topics?.length || 0}
-                  </div>
-                  <div>
-                    <span className="font-medium">Grid Size:</span>{" "}
-                    {config.gridSize}x{config.gridSize}
-                  </div>
-                  <div>
-                    <span className="font-medium">Difficulty:</span>{" "}
-                    {config.difficulty}
-                  </div>
-                  <div>
-                    <span className="font-medium">Language:</span>{" "}
-                    {config.language.toUpperCase()}
-                  </div>
-                  <div>
-                    <span className="font-medium">Pages:</span>{" "}
-                    {config.pageCount}
-                  </div>
-                  <div>
-                    <span className="font-medium">Words per Page:</span>{" "}
-                    {config.wordsPerPage}
-                  </div>
-                </div>
                 {config.topics && config.topics.length > 0 && (
                   <div className="mt-4 pt-4 border-t">
                     <h4 className="font-medium mb-2">Topics:</h4>

@@ -851,34 +851,62 @@ const drawFullWidthTOCEntry = (
     textStartX = circleX + circleRadius + 5;
   }
 
-  // Draw title text (Title Case)
+  // Calculate available width for text (accounting for page number and spacing)
+  const pageNumberX = x + width - 5;
+  const pageNumberWidth = pageNumberText ? pdf.getTextWidth(pageNumberText) : 0;
+  const reservedWidth = pageNumberWidth + 10; // Space for page number and padding
+  const availableTextWidth = pageNumberX - textStartX - reservedWidth;
+
+  // Draw title text (Title Case) with text wrapping
   const titleText = toTitleCase(title);
   const fontSize = isBold ? 16 : 14;
   pdf.setFontSize(fontSize);
   pdf.setFont("helvetica", isBold ? "bold" : "normal");
   pdf.setTextColor(0, 0, 0);
-  pdf.text(titleText, textStartX, y);
 
-  // Draw underline if requested
-  if (hasUnderline) {
-    const titleWidth = pdf.getTextWidth(titleText);
+  // Split text to fit within available width
+  const textLines = pdf.splitTextToSize(
+    titleText,
+    Math.max(availableTextWidth, 20)
+  );
+  let currentY = y;
+
+  // Draw each line of text
+  textLines.forEach((line: string, lineIndex: number) => {
+    pdf.text(line, textStartX, currentY);
+    if (lineIndex < textLines.length - 1) {
+      currentY += lineHeight * 0.65; // Further reduced spacing for wrapped lines
+    }
+  });
+
+  // Draw underline if requested (only on last line)
+  if (hasUnderline && textLines.length > 0) {
+    const lastLineWidth = pdf.getTextWidth(textLines[textLines.length - 1]);
     pdf.setDrawColor(
       colors.titleBackground[0],
       colors.titleBackground[1],
       colors.titleBackground[2]
     );
     pdf.setLineWidth(1);
-    pdf.line(textStartX, y + 2, textStartX + titleWidth, y + 2);
+    pdf.line(
+      textStartX,
+      currentY + 2,
+      textStartX + lastLineWidth,
+      currentY + 2
+    );
     pdf.setLineWidth(0.2);
   }
 
   // Draw dots between title and page number (only if page number exists)
-  const dotsStartX = textStartX + pdf.getTextWidth(titleText) + 5;
-  const pageNumberX = x + width - 5;
+  const lastLineWidth =
+    textLines.length > 0
+      ? pdf.getTextWidth(textLines[textLines.length - 1])
+      : 0;
+  const dotsStartX = textStartX + lastLineWidth + 5;
+
   if (pageNumberText) {
-    const pageNumberWidth = pdf.getTextWidth(pageNumberText);
     const dotsEndX = pageNumberX - pageNumberWidth - 5;
-    const dotsY = y - 2;
+    const dotsY = currentY - 2;
 
     if (dotsEndX > dotsStartX) {
       const dotSpacing = 3;
@@ -887,20 +915,20 @@ const drawFullWidthTOCEntry = (
       }
     }
 
-    // Draw page number
-    pdf.text(pageNumberText, pageNumberX, y, {
+    // Draw page number aligned with last line of text
+    pdf.text(pageNumberText, pageNumberX, currentY, {
       align: "right",
     });
   } else {
-    const dotsY = y - 2;
-
+    const dotsY = currentY - 2;
     const dotSpacing = 3;
     for (let dx = dotsStartX; dx < x + width - 10; dx += dotSpacing) {
       pdf.circle(dx, dotsY, 0.5, "F");
     }
   }
 
-  return y + lineHeight;
+  // Return the Y position after all lines
+  return currentY + lineHeight * 0.85; // Further reduced spacing after entry
 };
 
 // Helper to draw a two-column TOC entry with circle indicator
@@ -927,29 +955,53 @@ const drawTwoColumnTOCEntry = (
   );
   pdf.circle(circleX, circleY, circleRadius, "F");
 
-  // Draw title text (Title Case)
+  // Calculate available width for text (accounting for page number and spacing)
+  const pageNumberWidth = pdf.getTextWidth(String(pageNumber));
+  const reservedWidth = pageNumberWidth + 10; // Space for page number and padding
+  const availableTextWidth = columnWidth - (textStartX - x) - reservedWidth;
+
+  // Draw title text (Title Case) with text wrapping
   const titleText = toTitleCase(title);
   pdf.setFontSize(14);
   pdf.setFont("helvetica", "normal");
   pdf.setTextColor(0, 0, 0);
-  pdf.text(titleText, textStartX, y);
 
-  // Draw dots between title and page number within column width
-  const titleWidth = pdf.getTextWidth(titleText);
-  const pageNumberWidth = pdf.getTextWidth(String(pageNumber));
-  const dotsStartX = textStartX + titleWidth + 5;
+  // Split text to fit within available width
+  const textLines = pdf.splitTextToSize(
+    titleText,
+    Math.max(availableTextWidth, 20)
+  );
+  let currentY = y;
+
+  // Draw each line of text
+  textLines.forEach((line: string, lineIndex: number) => {
+    pdf.text(line, textStartX, currentY);
+    if (lineIndex < textLines.length - 1) {
+      currentY += lineHeight * 0.65; // Further reduced spacing for wrapped lines
+    }
+  });
+
+  // Draw dots between title and page number within column width (only on last line)
+  const lastLineWidth =
+    textLines.length > 0
+      ? pdf.getTextWidth(textLines[textLines.length - 1])
+      : 0;
+  const dotsStartX = textStartX + lastLineWidth + 5;
   const dotsEndX = x + columnWidth - pageNumberWidth - 5;
-  const dotsY = y - 2;
+  const dotsY = currentY - 2;
 
-  const dotSpacing = 3;
-  for (let dx = dotsStartX; dx < dotsEndX; dx += dotSpacing) {
-    pdf.circle(dx, dotsY, 0.5, "F");
+  if (dotsEndX > dotsStartX) {
+    const dotSpacing = 3;
+    for (let dx = dotsStartX; dx < dotsEndX; dx += dotSpacing) {
+      pdf.circle(dx, dotsY, 0.5, "F");
+    }
   }
 
-  // Page number aligned right within column
-  pdf.text(String(pageNumber), x + columnWidth, y, { align: "right" });
+  // Page number aligned right within column, aligned with last line of text
+  pdf.text(String(pageNumber), x + columnWidth, currentY, { align: "right" });
 
-  return y + lineHeight;
+  // Return the Y position after all lines
+  return currentY + lineHeight * 0.85; // Further reduced spacing after entry
 };
 
 // Helper to draw TOC section heading styled like introduction headings
@@ -962,8 +1014,8 @@ const drawTocSectionHeading = (
   colors: ColorPalette
 ): number => {
   const headingFontSize = 16;
-  const headingLineHeight = 8;
-  const spacingAfter = 5;
+  const headingLineHeight = 7; // Reduced from 8
+  const spacingAfter = 3; // Reduced from 5
   const headingText = title.toUpperCase();
 
   pdf.setFontSize(headingFontSize);
@@ -973,20 +1025,36 @@ const drawTocSectionHeading = (
     colors.titleBackground[1],
     colors.titleBackground[2]
   );
-  pdf.text(headingText, x, y);
 
-  const underlineY = y + headingLineHeight - 1.5;
+  // Split text to fit within available width
+  const textLines = pdf.splitTextToSize(headingText, Math.max(width, 20));
+  let currentY = y;
+
+  // Draw each line of text
+  textLines.forEach((line: string, lineIndex: number) => {
+    pdf.text(line, x, currentY);
+    if (lineIndex < textLines.length - 1) {
+      currentY += headingLineHeight * 0.7; // Reduced spacing
+    }
+  });
+
+  // Draw underline on last line only
+  const underlineY = currentY + headingLineHeight - 1.5;
+  const lastLineWidth =
+    textLines.length > 0
+      ? pdf.getTextWidth(textLines[textLines.length - 1])
+      : width;
   pdf.setDrawColor(
     colors.titleBackground[0],
     colors.titleBackground[1],
     colors.titleBackground[2]
   );
   pdf.setLineWidth(0.6);
-  pdf.line(x, underlineY, x + width, underlineY);
+  pdf.line(x, underlineY, x + Math.min(lastLineWidth, width), underlineY);
   pdf.setLineWidth(0.2);
   pdf.setTextColor(0, 0, 0);
 
-  return y + headingLineHeight + spacingAfter;
+  return currentY + headingLineHeight + spacingAfter;
 };
 
 // Two-column, multi-page Table of Contents renderer with three sections
@@ -1007,29 +1075,28 @@ const drawTableOfContentsMulti = (
   answerPageStart: number,
   startingTocPageNumber: number
 ): number => {
-  // Layout constants
+  // Layout constants - optimized for maximum space usage
   const titleY = 40;
-  const margin = 18;
-  const contentStartY = titleY + 30;
-  const bottomLimit = pageHeight - 35;
-  const lineHeight = 12;
-  const sectionSpacing = 8; // Spacing between sections
-  const columnGap = 20;
+  const margin = 15; // Reduced from 18
+  const contentStartY = titleY + 25; // Reduced from 30
+  const bottomLimit = pageHeight; // Further reduced (footer is at pageHeight - 15, only 2mm buffer)
+  const lineHeight = 9.5; // Further reduced from 10 for tighter spacing
+  const sectionSpacing = 3; // Further reduced from 4
+  const columnGap = 15; // Reduced from 20
   const contentWidth = pageWidth - 2 * margin;
-  const columnWidth = (contentWidth - columnGap) / 2;
   const rowsPerColumn = Math.floor((bottomLimit - contentStartY) / lineHeight);
 
   // Structure:
   // Part 1: Introduction (full width) + How To Play (full width) = 2 rows
-  // Part 2: "Word search by topic" header (full width) = 1 row + topics (2 columns)
+  // Part 2: "Word search by topic" header (full width) = 1 row + topics (2 topics per row)
   // Part 3: Answer (full width) = 1 row
   // Total full-width rows = 4 (Intro, How To Play, Header, Answer)
-  // Topic rows = topics.length
+  // Topic rows = Math.ceil(topics.length / 2) (2 topics per row)
 
   // Calculate pages needed
   const fullWidthRows = 4; // Intro, How To Play, Header, Answer
-  const topicRows = topics.length;
-  const totalRows = fullWidthRows + Math.ceil(topicRows / 2); // Topics in 2 columns
+  const topicRows = Math.ceil(topics.length / 2); // 2 topics per row
+  const totalRows = fullWidthRows + topicRows;
   const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerColumn));
 
   let currentPage = 0;
@@ -1098,6 +1165,12 @@ const drawTableOfContentsMulti = (
     true // isBold
   );
 
+  // Check if we exceeded bottom limit after drawing (in case text wrapped)
+  if (currentY > bottomLimit) {
+    startNewPage();
+    currentY = contentStartY;
+  }
+
   if (currentY + lineHeight > bottomLimit) {
     startNewPage();
   }
@@ -1113,8 +1186,14 @@ const drawTableOfContentsMulti = (
     true // isBold
   );
 
+  // Check if we exceeded bottom limit after drawing
+  if (currentY > bottomLimit) {
+    startNewPage();
+    currentY = contentStartY;
+  }
+
   // Add spacing before Part 2
-  currentY += sectionSpacing;
+  currentY += sectionSpacing * 0.4; // Further reduced spacing
 
   // Part 2: "Word search by topic" header styled like introduction headings
   if (currentY + lineHeight > bottomLimit) {
@@ -1130,63 +1209,90 @@ const drawTableOfContentsMulti = (
   );
 
   // Add top padding before topics list
-  const topicsTopPadding = 10;
+  const topicsTopPadding = 3; // Further reduced from 4
   currentY += topicsTopPadding;
 
-  // Topics in 2 columns (each with circle)
-  const leftX = margin;
-  const rightX = margin + columnWidth + columnGap;
-  let leftY = currentY;
-  let rightY = currentY;
-  let usedRowsLeft = 0;
-  let usedRowsRight = 0;
+  // Topics in 2 columns layout (2 topics per row)
+  // Calculate how many topics per row based on available width
+  const topicsPerRow = 2; // 2 topics per row
+  const topicEntryWidth =
+    (contentWidth - (topicsPerRow - 1) * columnGap) / topicsPerRow;
+
+  let rowStartY = currentY;
+  let rowMaxY = currentY; // Track the maximum Y in current row
+  let topicsInCurrentRow = 0;
 
   topics.forEach((topic, index) => {
     const vocabularyPage = wordSearchStartPage + index * 2;
 
+    // Check if we need to start a new row (after completing previous row)
+    if (topicsInCurrentRow > 0 && topicsInCurrentRow % topicsPerRow === 0) {
+      // Move to next row
+      currentY = rowMaxY + 0.8; // Further reduced spacing between rows
+      rowStartY = currentY;
+      rowMaxY = currentY;
+    }
+
     // Check if we need a new page
-    if (usedRowsLeft >= rowsPerColumn && usedRowsRight >= rowsPerColumn) {
+    if (rowStartY + lineHeight * 3 > bottomLimit) {
       startNewPage();
-      leftY = contentStartY;
-      rightY = contentStartY;
-      usedRowsLeft = 0;
-      usedRowsRight = 0;
+      rowStartY = contentStartY;
+      currentY = contentStartY;
+      rowMaxY = contentStartY;
+      topicsInCurrentRow = 0;
     }
 
-    const isLeftColumn = usedRowsLeft < rowsPerColumn;
-    const x = isLeftColumn ? leftX : rightX;
-    const y = isLeftColumn ? leftY : rightY;
+    // Calculate position for this topic (2 topics per row)
+    const colIndex = topicsInCurrentRow % topicsPerRow;
+    const x = margin + colIndex * (topicEntryWidth + columnGap);
+    const y = rowStartY;
 
-    if (isLeftColumn) {
-      leftY = drawTwoColumnTOCEntry(
+    // Draw topic entry
+    const newY = drawTwoColumnTOCEntry(
+      pdf,
+      topic,
+      vocabularyPage,
+      x,
+      y,
+      topicEntryWidth,
+      colors,
+      lineHeight
+    );
+
+    // Update rowMaxY to track the bottom of the current row
+    if (newY > rowMaxY) {
+      rowMaxY = newY;
+    }
+
+    // Check if text wrapped and exceeded bottom limit
+    if (rowMaxY > bottomLimit) {
+      startNewPage();
+      rowStartY = contentStartY;
+      currentY = contentStartY;
+      rowMaxY = contentStartY;
+      topicsInCurrentRow = 0;
+      // Redraw on new page
+      const redrawX = margin;
+      const redrawY = contentStartY;
+      rowMaxY = drawTwoColumnTOCEntry(
         pdf,
         topic,
         vocabularyPage,
-        x,
-        y,
-        columnWidth,
+        redrawX,
+        redrawY,
+        topicEntryWidth,
         colors,
         lineHeight
       );
-      usedRowsLeft++;
-    } else {
-      rightY = drawTwoColumnTOCEntry(
-        pdf,
-        topic,
-        vocabularyPage,
-        x,
-        y,
-        columnWidth,
-        colors,
-        lineHeight
-      );
-      usedRowsRight++;
+      currentY = rowMaxY;
     }
+
+    topicsInCurrentRow++;
   });
 
-  // Update currentY to the bottom of the columns
-  currentY = Math.max(leftY, rightY);
-  currentY += sectionSpacing;
+  // Update currentY to the bottom of the last row
+  currentY = rowMaxY;
+  currentY += sectionSpacing * 0.4; // Further reduced spacing before Answer section
 
   // Part 3: Answer (full width with circle, bold and larger)
   if (currentY + lineHeight > bottomLimit) {
@@ -1204,6 +1310,12 @@ const drawTableOfContentsMulti = (
     lineHeight,
     true // isBold
   );
+
+  // Check if we exceeded bottom limit after drawing
+  if (currentY > bottomLimit) {
+    startNewPage();
+    currentY = contentStartY;
+  }
 
   // Draw footer on last page
   drawPageFooter(
@@ -2087,12 +2199,12 @@ export async function POST(request: NextRequest) {
 
     // Structure:
     // Part 1: Introduction (full width) + How To Play (full width) = 2 rows
-    // Part 2: "Word search by topic" header (full width) = 1 row + topics (2 columns)
+    // Part 2: "Word search by topic" header (full width) = 1 row + topics (2 topics per row)
     // Part 3: Answer (full width) = 1 row
     // Total full-width rows = 4 (Intro, How To Play, Header, Answer)
-    // Topic rows = topics.length (in 2 columns, so Math.ceil(topics.length / 2))
+    // Topic rows = Math.ceil(topics.length / 2) (2 topics per row)
     const fullWidthRows = 4; // Intro, How To Play, Header, Answer
-    const topicRows = Math.ceil(topicTitles.length / 2); // Topics in 2 columns
+    const topicRows = Math.ceil(topicTitles.length / 2); // 2 topics per row
     const totalRows = fullWidthRows + topicRows;
     const tocPages = Math.max(1, Math.ceil(totalRows / rowsPerColumn));
 
@@ -2181,31 +2293,35 @@ export async function POST(request: NextRequest) {
           contentRenderer: (pdf) => {
             // Add word list without bullets with decorative styling
             if (config.showWordList) {
-              const wordsPerPage = Math.ceil(grid.words.length / 3); // 3 columns
-              const columnWidth = contentWidth / 3;
+              // Use 4 columns to maximize space usage
+              const numColumns = 4;
+              const wordsPerColumn = Math.ceil(grid.words.length / numColumns);
+              const columnWidth = contentWidth / numColumns;
               // Calculate startY based on title (40) and subtitle
               // Title: 40mm, Subtitle: after title
               const titleY = 40;
-              const subtitleY = titleY + 15 + 10; // After title + spacing + 10mm padding top
-              const startY = subtitleY + 10 + 10; // After subtitle + spacing + 10mm padding bottom (matching renderPage)
+              const subtitleY = titleY + 12 + 8; // Reduced spacing
+              const subtitlePaddingBottom = 24; // Padding bottom between subtitle and word list
+              const startY = subtitleY + subtitlePaddingBottom; // Added padding bottom after subtitle
+              const wordSpacing = 15; // Reduced from 15
 
-              pdf.setFontSize(16);
+              pdf.setFontSize(15); // Slightly reduced from 16
               pdf.setFont("helvetica", "normal");
 
               grid.words.forEach((wordPos: any, wordIndex: number) => {
-                const columnIndex = Math.floor(wordIndex / wordsPerPage);
-                const rowIndex = wordIndex % wordsPerPage;
+                const columnIndex = Math.floor(wordIndex / wordsPerColumn);
+                const rowIndex = wordIndex % wordsPerColumn;
                 // Center x position for each column
                 const columnCenterX =
                   margin + columnIndex * columnWidth + columnWidth / 2;
-                const y = startY + rowIndex * 15;
+                const y = startY + rowIndex * wordSpacing;
 
                 // Convert word to uppercase
                 const wordUpper = wordPos.word.toUpperCase();
 
                 // Calculate word width for centered background
                 const wordWidth = pdf.getTextWidth(wordUpper);
-                const backgroundWidth = Math.max(wordWidth + 8, 40); // Min 40mm or word width + padding
+                const backgroundWidth = Math.max(wordWidth + 6, 35); // Reduced padding and min width
 
                 // Add subtle background for each word (centered)
                 pdf.setFillColor(
@@ -2221,9 +2337,9 @@ export async function POST(request: NextRequest) {
                 pdf.setLineWidth(0.2);
                 pdf.roundedRect(
                   columnCenterX - backgroundWidth / 2,
-                  y - 8,
+                  y - 6, // Reduced from 8
                   backgroundWidth,
-                  10,
+                  8, // Reduced from 10
                   2,
                   2,
                   "FD"
@@ -2276,17 +2392,20 @@ export async function POST(request: NextRequest) {
           pageNumber: gridPageNumber,
           footerNote: `Answers on page ${answerPageNumber}`,
           contentRenderer: (pdf) => {
-            // Calculate grid dimensions - make it larger and centered
-            const topOffset = 10; // Padding top
+            // Calculate grid dimensions - maximize space usage
+            const topOffset = 5; // Reduced padding top
+            const bottomOffset = 15; // Reduced from 20
             const maxGridSize = Math.min(
-              contentWidth - 20,
-              pageHeight - topOffset - 20
+              contentWidth - 10, // Reduced from 20
+              pageHeight - topOffset - bottomOffset
             );
-            const cellSize = Math.min(maxGridSize / grid.size, 18); // Allow larger cells when space permits
+            const cellSize = Math.min(maxGridSize / grid.size, 20); // Increased max from 18 to 20
             const gridWidth = cellSize * grid.size;
             const gridHeight = cellSize * grid.size;
             const gridX = (pageWidth - gridWidth) / 2;
-            const gridY = topOffset + (pageHeight - topOffset - gridHeight) / 2;
+            // Center vertically but use more space
+            const availableHeight = pageHeight - topOffset - bottomOffset;
+            const gridY = topOffset + (availableHeight - gridHeight) / 2;
 
             // Draw grid with bold text - larger font for better readability
             pdf.setFontSize(Math.max(20, cellSize * 1)); // Scale font with cell size, minimum 12
@@ -2332,10 +2451,10 @@ export async function POST(request: NextRequest) {
     const totalAnswerPages = Math.ceil(grids.length / gridsPerPage);
     // answerPageStart is already calculated earlier before TOC rendering
 
-    const answerKeyStartY = 65; // Reduced to maximize space for grids
-    const answerKeyTitleSpacing = 8; // Reduced to maximize space
-    const answerKeyGridGapX = 30; // Reduced for wider grids
-    const answerKeyGridGapY = 15; // Reduced for better space utilization
+    const answerKeyStartY = 55; // Further reduced to maximize space for grids
+    const answerKeyTitleSpacing = 6; // Further reduced
+    const answerKeyGridGapX = 20; // Further reduced for wider grids
+    const answerKeyGridGapY = 12; // Further reduced for better space utilization
 
     for (let answerPage = 0; answerPage < totalAnswerPages; answerPage++) {
       pdf.addPage();
@@ -2366,7 +2485,7 @@ export async function POST(request: NextRequest) {
             // Calculate cell size to make grids wider - maximize space usage
             const availableWidth =
               pageWidth - 2 * margin - (cols - 1) * answerKeyGridGapX;
-            const availableHeight = pageHeight - answerKeyStartY - 20; // Leave 20mm for footer
+            const availableHeight = pageHeight - answerKeyStartY - 15; // Reduced from 20mm for footer
             const maxCellSizeByWidth = availableWidth / (cols * 20); // For 20x20 grid
             // Account for vertical spacing between rows when calculating height
             const rowSpacing = answerKeyGridGapY + answerKeyTitleSpacing;
@@ -2375,8 +2494,8 @@ export async function POST(request: NextRequest) {
             const cellSize = Math.min(
               maxCellSizeByWidth,
               maxCellSizeByHeight,
-              14
-            ); // Increased max to 14mm for much larger grids
+              16
+            ); // Increased max to 16mm for even larger grids
 
             for (let i = startGridIndex; i < endGridIndex; i++) {
               const gridIndex = i - startGridIndex;
@@ -2411,7 +2530,7 @@ export async function POST(request: NextRequest) {
               pdf.text(
                 `${titleText} ${pageInfo}`,
                 gridX + gridWidth / 2,
-                gridY - 6, // Moved higher up
+                gridY - 4, // Further reduced spacing
                 {
                   align: "center",
                 }

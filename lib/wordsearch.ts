@@ -33,12 +33,33 @@ export class WordSearchGenerator {
       .map(() => Array(gridSize).fill(""));
 
     const placedWords: WordPosition[] = [];
-    const wordsToPlace = [...words].sort((a, b) => b.length - a.length); // Place longer words first
+    // Create mapping: normalized word -> original word (for word list display)
+    const wordMap = new Map<string, string>();
+    words.forEach((originalWord) => {
+      const normalized = originalWord.replace(/\s+/g, "").toUpperCase();
+      // If multiple words normalize to same, keep the first one
+      if (!wordMap.has(normalized)) {
+        wordMap.set(normalized, originalWord);
+      }
+    });
 
-    for (const word of wordsToPlace) {
-      const placed = this.placeWord(grid, word, gridSize);
+    // Normalize words: remove spaces and convert to uppercase (for grid placement)
+    const normalizedWords = words.map((word) =>
+      word.replace(/\s+/g, "").toUpperCase()
+    );
+    const wordsToPlace = [...normalizedWords].sort(
+      (a, b) => b.length - a.length
+    ); // Place longer words first
+
+    for (const normalizedWord of wordsToPlace) {
+      const placed = this.placeWord(grid, normalizedWord, gridSize);
       if (placed) {
-        placedWords.push(placed);
+        // Use original word (with spaces) for word list display
+        const originalWord = wordMap.get(normalizedWord) || normalizedWord;
+        placedWords.push({
+          ...placed,
+          word: originalWord,
+        });
       }
     }
 
@@ -186,11 +207,12 @@ export class WordSearchGenerator {
 
     // Always distribute unique words across pages - each word appears only once
     const totalUniqueWordsAvailable = words.length;
-    
+
     // Calculate words per page if not provided
-    const calculatedWordsPerPage = wordsPerPage || Math.ceil(totalUniqueWordsAvailable / pageCount);
+    const calculatedWordsPerPage =
+      wordsPerPage || Math.ceil(totalUniqueWordsAvailable / pageCount);
     const wordsPerGrid = Math.min(calculatedWordsPerPage, words.length);
-    
+
     // Calculate maximum pages we can create with unique words
     const maxPagesWithUniqueWords = Math.ceil(
       totalUniqueWordsAvailable / wordsPerGrid
@@ -207,7 +229,7 @@ export class WordSearchGenerator {
       // Calculate how many words for this page
       const remainingWords = totalUniqueWordsAvailable - usedWordIndex;
       const wordsForThisPageCount = Math.min(wordsPerGrid, remainingWords);
-      
+
       // Get words for this page (each word only appears once)
       const wordsForThisPage = words.slice(
         usedWordIndex,

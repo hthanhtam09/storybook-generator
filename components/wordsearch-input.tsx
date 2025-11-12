@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import {
-  Plus,
   X,
   Settings,
   Trash2,
@@ -43,8 +42,8 @@ export function WordSearchInput({
   onConfigChange,
 }: WordSearchInputProps) {
   const { toast } = useToast();
-  const [newTopic, setNewTopic] = useState("");
-  const [newTopicWords, setNewTopicWords] = useState("");
+  const [bulkImportText, setBulkImportText] = useState("");
+  const [bulkImportError, setBulkImportError] = useState<string>("");
   const [isGeneratingIntroduction, setIsGeneratingIntroduction] =
     useState(false);
   const [isGeneratingIntroPrompt, setIsGeneratingIntroPrompt] = useState(false);
@@ -71,53 +70,19 @@ export function WordSearchInput({
     const allWords = syncWordsFromTopics(topics);
     // When using topics, pageCount = number of topics (each topic gets one grid)
     const pageCount = topics.length;
+    // Calculate average words per page (topic)
+    const totalWordsInTopics = topics.reduce(
+      (sum, topic) => sum + topic.words.length,
+      0
+    );
+    const wordsPerPage =
+      pageCount > 0 ? Math.ceil(totalWordsInTopics / pageCount) : 0;
     onConfigChange({
       ...config,
       topics,
       words: allWords,
       pageCount: pageCount > 0 ? pageCount : 1,
-    });
-  };
-
-  const handleAddTopic = () => {
-    if (!newTopic.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a topic name.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const words = newTopicWords
-      .split(/[,;\n]/)
-      .map((w) => w.trim())
-      .filter((w) => w.length > 0);
-
-    if (words.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please enter at least one vocabulary word.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const uniqueWords = [...new Set(words)];
-    const newTopics = [
-      ...config.topics,
-      { topic: newTopic.trim(), words: uniqueWords },
-    ];
-
-    updateConfigWithTopics(newTopics);
-    setNewTopic("");
-    setNewTopicWords("");
-
-    toast({
-      title: "Success!",
-      description: `Added topic "${newTopic.trim()}" with ${
-        uniqueWords.length
-      } vocabulary words.`,
+      wordsPerPage: wordsPerPage > 0 ? wordsPerPage : config.wordsPerPage,
     });
   };
 
@@ -154,6 +119,128 @@ export function WordSearchInput({
       newTopics[topicIndex].words.push(word.trim());
       updateConfigWithTopics(newTopics);
     }
+  };
+
+  // Parse bulk import text
+  const parseBulkImport = (
+    text: string
+  ): {
+    topics: TopicVocabulary[];
+    errors: string[];
+  } => {
+    const topics: TopicVocabulary[] = [];
+    const errors: string[] = [];
+
+    // Split by lines
+    const lines = text.split("\n").map((line) => line.trim());
+
+    let currentTopic: TopicVocabulary | null = null;
+    let currentWords: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Skip empty lines
+      if (!line) continue;
+
+      // Check if line is a topic header (format: "Topic X: Topic Name" or "Topic X:Topic Name")
+      const topicMatch = line.match(/^Topic\s+\d+:\s*(.+)$/i);
+      if (topicMatch) {
+        // Save previous topic if exists
+        if (currentTopic && currentWords.length > 0) {
+          currentTopic.words = currentWords;
+          topics.push(currentTopic);
+        } else if (currentTopic && currentWords.length === 0) {
+          errors.push(`Topic "${currentTopic.topic}" has no words`);
+        }
+
+        // Start new topic
+        const topicName = topicMatch[1].trim();
+        if (!topicName) {
+          errors.push(`Topic at line ${i + 1} has no name`);
+          currentTopic = null;
+          currentWords = [];
+          continue;
+        }
+
+        currentTopic = { topic: topicName, words: [] };
+        currentWords = [];
+      } else if (currentTopic) {
+        // This is a word line - split by comma
+        const words = line
+          .split(",")
+          .map((w) => w.trim())
+          .filter((w) => w.length > 0);
+
+        // Add all words (allow duplicates)
+        currentWords.push(...words);
+      } else {
+        // Line doesn't match topic format and no current topic
+        if (line.length > 0) {
+          errors.push(
+            `Line ${i + 1}: "${line}" - Expected topic header (Topic X: Name)`
+          );
+        }
+      }
+    }
+
+    // Save last topic if exists
+    if (currentTopic) {
+      if (currentWords.length > 0) {
+        currentTopic.words = currentWords;
+        topics.push(currentTopic);
+      } else {
+        errors.push(`Topic "${currentTopic.topic}" has no words`);
+      }
+    }
+
+    return { topics, errors };
+  };
+
+  // Handle bulk import
+  const handleBulkImport = () => {
+    if (!bulkImportText.trim()) {
+      setBulkImportError("Vui lòng nhập nội dung để import");
+      return;
+    }
+
+    setBulkImportError("");
+
+    const { topics, errors } = parseBulkImport(bulkImportText);
+
+    // Show errors if any
+    if (errors.length > 0) {
+      setBulkImportError(
+        `Lỗi định dạng:\n${errors.map((e, i) => `${i + 1}. ${e}`).join("\n")}`
+      );
+      return;
+    }
+
+    if (topics.length === 0) {
+      setBulkImportError(
+        "Không tìm thấy topic nào. Vui lòng kiểm tra định dạng."
+      );
+      return;
+    }
+
+    // Add all topics
+    const newTopics = [...config.topics, ...topics];
+    updateConfigWithTopics(newTopics);
+
+    // Calculate total words
+    const totalWords = topics.reduce(
+      (sum, topic) => sum + topic.words.length,
+      0
+    );
+
+    // Clear bulk import text
+    setBulkImportText("");
+    setBulkImportError("");
+
+    toast({
+      title: "Thành công!",
+      description: `Đã import ${topics.length} topic với tổng ${totalWords} từ vựng.`,
+    });
   };
 
   const handleGenerateIntroduction = async () => {
@@ -331,31 +418,41 @@ export function WordSearchInput({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Add New Topic */}
-              <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+              {/* Bulk Import */}
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
                 <div className="space-y-2">
-                  <Label>Topic (Chủ đề)</Label>
-                  <Input
-                    placeholder="e.g., Animals, Colors, Food..."
-                    value={newTopic}
-                    onChange={(e) => setNewTopic(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Vocabulary (Từ vựng)</Label>
                   <Textarea
-                    placeholder="cat, dog, bird&#10;fish, rabbit"
-                    value={newTopicWords}
-                    onChange={(e) => setNewTopicWords(e.target.value)}
-                    rows={3}
+                    placeholder={`Topic 1: Christmas Trees
+
+fir, pine, spruce, evergreen, tannenbaum, branches, needles, trunk, star, angel, garland, ribbon, ornament, bauble, bulb, icicle, light, strand, plug, socket, stand, water, roots, sap, resin, bark, cone, seed, foliage, canopy, silhouette, glow, sparkle, shimmer, twinkle, decorate
+
+Topic 2: Santa Claus
+
+santa, claus, jolly, red, suit, white, beard, hat, pom-pom, belt, buckle, boots, sack, bag, ho-ho-ho, laugh, chimney, roof, sleigh, reindeer, elf, helper, workshop, north, pole, cookies, milk, list, naughty, nice, deliver, visit, midnight, magic`}
+                    value={bulkImportText}
+                    onChange={(e) => {
+                      setBulkImportText(e.target.value);
+                      setBulkImportError("");
+                    }}
+                    rows={10}
+                    className="font-mono text-sm"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Separate words by comma, semicolon, or new line
-                  </p>
+                  {bulkImportError && (
+                    <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                      <p className="text-sm text-destructive whitespace-pre-wrap">
+                        {bulkImportError}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <Button onClick={handleAddTopic} variant="default" size="sm">
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Topic
+                <Button
+                  onClick={handleBulkImport}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  Import Topics
                 </Button>
               </div>
 
