@@ -2176,7 +2176,12 @@ export async function POST(request: NextRequest) {
     const borderWidth = pageWidth - 2 * borderMargin;
     const borderHeight = pageHeight - 2 * borderMargin;
 
-    // Page 1: Cover Page
+    // Page 1: Blank white page
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, 0, pageWidth, pageHeight, "F");
+
+    // Page 2: Cover Page
+    pdf.addPage();
     drawCoverPage(
       pdf,
       pageWidth,
