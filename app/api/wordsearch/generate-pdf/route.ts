@@ -649,13 +649,15 @@ const drawPageFooter = (
     });
   }
 
-  // Draw page number
-  pdf.setFontSize(12);
-  pdf.setFont("helvetica", "bold");
-  pdf.setTextColor(0, 0, 0);
-  pdf.text(`${pageNumber}`, pageWidth / 2, footerY, {
-    align: "center",
-  });
+  // Draw page number only if pageNumber > 0 (0 means no page number for cover/TOC pages)
+  if (pageNumber > 0) {
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(`${pageNumber}`, pageWidth / 2, footerY, {
+      align: "center",
+    });
+  }
 };
 
 // Helper function to draw cover page
@@ -1105,10 +1107,10 @@ const drawTableOfContentsMulti = (
   // Helper to start a new page
   const startNewPage = () => {
     if (currentPage > 0) {
-      // Draw footer on previous page before adding new one
+      // Draw footer on previous page before adding new one (TOC pages don't have page numbers)
       drawPageFooter(
         pdf,
-        startingTocPageNumber + currentPage - 1,
+        0, // 0 means no page number for TOC pages
         pageWidth,
         pageHeight
       );
@@ -1317,10 +1319,10 @@ const drawTableOfContentsMulti = (
     currentY = contentStartY;
   }
 
-  // Draw footer on last page
+  // Draw footer on last page (TOC pages don't have page numbers)
   drawPageFooter(
     pdf,
-    startingTocPageNumber + currentPage - 1,
+    0, // 0 means no page number for TOC pages
     pageWidth,
     pageHeight
   );
@@ -1504,7 +1506,8 @@ const drawIntroduction = (
   borderHeight: number,
   colors: ColorPalette,
   design: DesignStyle,
-  introductionText: string | undefined
+  introductionText: string | undefined,
+  pageNumber: number
 ) => {
   // Draw page background
   drawPageBackground(
@@ -1732,7 +1735,7 @@ const drawIntroduction = (
   }
 
   // Draw footer
-  drawPageFooter(pdf, 3, pageWidth, pageHeight);
+  drawPageFooter(pdf, pageNumber, pageWidth, pageHeight);
 };
 
 // Helper function to draw rules & directions page with illustration
@@ -1744,7 +1747,8 @@ const drawRulesAndDirections = (
   borderWidth: number,
   borderHeight: number,
   colors: ColorPalette,
-  design: DesignStyle
+  design: DesignStyle,
+  pageNumber: number
 ) => {
   // Draw page background
   drawPageBackground(
@@ -2018,7 +2022,7 @@ const drawRulesAndDirections = (
   }
 
   // Draw footer
-  drawPageFooter(pdf, 4, pageWidth, pageHeight);
+  drawPageFooter(pdf, pageNumber, pageWidth, pageHeight);
 };
 
 // Generic function to render a page with title, subtitle, content, and footer
@@ -2208,12 +2212,13 @@ export async function POST(request: NextRequest) {
     const totalRows = fullWidthRows + topicRows;
     const tocPages = Math.max(1, Math.ceil(totalRows / rowsPerColumn));
 
-    // Derive dynamic page numbers based on TOC page count
-    const tocStartPage = 2; // after cover
-    const introPageNumber = tocStartPage + tocPages; // immediately after TOC pages
-    const howToPlayPageNumber = introPageNumber + 1;
-    const wordSearchStartPage = howToPlayPageNumber + 1; // after How to Play
+    // Derive dynamic page numbers - starting from Introduction as page 1
+    // Cover and TOC pages don't have page numbers
+    const introPageNumber = 1; // Introduction is page 1
+    const howToPlayPageNumber = 2; // How to Play is page 2
+    const wordSearchStartPage = 3; // Word search pages start from page 3
     const answerPageStart = wordSearchStartPage + grids.length * 2; // after all word search pages
+    const tocStartPage = 0; // TOC pages don't have page numbers (0 means no number)
 
     // Render TOC (multi-page, three sections)
     pdf.addPage();
@@ -2245,7 +2250,8 @@ export async function POST(request: NextRequest) {
       borderHeight,
       colors,
       design,
-      config.introduction
+      config.introduction,
+      introPageNumber
     );
 
     // Page 4: Rules & Directions
@@ -2258,7 +2264,8 @@ export async function POST(request: NextRequest) {
       borderWidth,
       borderHeight,
       colors,
-      design
+      design,
+      howToPlayPageNumber
     );
 
     // Add each grid as 2 separate pages (starting from page 5)
@@ -2520,10 +2527,9 @@ export async function POST(request: NextRequest) {
               // Add title with page numbers - moved higher up
               const answerTopicTitle =
                 topicTitles[i] || config.theme || "WORD SEARCH";
-              const titleText = `${answerTopicTitle.toUpperCase()}`;
-              const vocabularyPage = wordSearchStartPage + i * 2; // Page with vocabulary/words
+              const titleText = answerTopicTitle;
               const gridPage = wordSearchStartPage + i * 2 + 1; // Page with grid
-              const pageInfo = `(pages ${vocabularyPage}-${gridPage})`;
+              const pageInfo = `(page ${gridPage})`;
 
               pdf.setFontSize(11);
               pdf.setFont("helvetica", "normal");
