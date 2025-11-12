@@ -673,6 +673,28 @@ const drawCoverPage = (
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, pageWidth, pageHeight, "F");
 
+  const borderMargin = 10;
+  const borderWidth = pageWidth - 2 * borderMargin;
+  const borderHeight = pageHeight - 2 * borderMargin;
+  const innerOffset = design.borderThickness * design.borderLayers;
+  const innerX = borderMargin + innerOffset;
+  const innerY = borderMargin + innerOffset;
+  const innerWidth = borderWidth - 2 * innerOffset;
+  const innerHeight = borderHeight - 2 * innerOffset;
+
+  drawDecorativeBorder(
+    pdf,
+    borderMargin,
+    borderMargin,
+    borderWidth,
+    borderHeight,
+    colors,
+    design
+  );
+
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(innerX, innerY, innerWidth, innerHeight, "F");
+
   if (coverImage) {
     try {
       // Detect image format
@@ -682,35 +704,10 @@ const drawCoverPage = (
           ? "JPEG"
           : "PNG";
 
-      // Add cover image - full page with margins
-      const margin = 10;
-      const imageWidth = pageWidth - 2 * margin;
-      const imageHeight = pageHeight - 2 * margin;
-      pdf.addImage(coverImage, format, margin, margin, imageWidth, imageHeight);
+      pdf.addImage(coverImage, format, innerX, innerY, innerWidth, innerHeight);
     } catch (error) {
       console.error("Error adding cover image:", error);
-      // Fallback: draw decorative border if image fails
-      drawDecorativeBorder(
-        pdf,
-        10,
-        10,
-        pageWidth - 20,
-        pageHeight - 20,
-        colors,
-        design
-      );
     }
-  } else {
-    // If no cover image, draw decorative border
-    drawDecorativeBorder(
-      pdf,
-      10,
-      10,
-      pageWidth - 20,
-      pageHeight - 20,
-      colors,
-      design
-    );
   }
 };
 
@@ -2336,12 +2333,6 @@ export async function POST(request: NextRequest) {
                   colors.wordBackground[1],
                   colors.wordBackground[2]
                 );
-                pdf.setDrawColor(
-                  colors.wordBackgroundStroke[0],
-                  colors.wordBackgroundStroke[1],
-                  colors.wordBackgroundStroke[2]
-                );
-                pdf.setLineWidth(0.2);
                 pdf.roundedRect(
                   columnCenterX - backgroundWidth / 2,
                   y - 6, // Reduced from 8
@@ -2349,7 +2340,7 @@ export async function POST(request: NextRequest) {
                   8, // Reduced from 10
                   2,
                   2,
-                  "FD"
+                  "F"
                 );
 
                 // Draw word text (centered, uppercase)
