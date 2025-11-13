@@ -516,7 +516,7 @@ const drawDecorativeBorder = (
   }
 };
 
-// Helper function to draw decorative title with background bar
+// Helper function to draw decorative title without background bar
 const drawDecorativeTitle = (
   pdf: jsPDF,
   title: string,
@@ -528,39 +528,11 @@ const drawDecorativeTitle = (
   borderMargin: number,
   borderWidth: number
 ) => {
-  // Calculate title background bar dimensions (chạm vào border, liền mạch)
-  // Title bar chạm vào border, không có viền trắng
-  const titleBarHeight = 30; // Height of title background bar (tăng lên)
-  const titleBarX = borderMargin; // Bắt đầu từ border
-  const titleBarY = borderMargin; // Bắt đầu từ border top
-  const titleBarWidth = borderWidth; // Chiều rộng bằng border width
-
-  // Draw title background bar (không có border, chạm vào border)
-  pdf.setFillColor(
-    colors.titleBackground[0],
-    colors.titleBackground[1],
-    colors.titleBackground[2]
-  );
-  pdf.roundedRect(
-    titleBarX,
-    titleBarY,
-    titleBarWidth,
-    titleBarHeight,
-    2,
-    2,
-    "F"
-  );
-
-  // Draw title text (white for contrast on colored background)
-  // Center text vertically in the bar
-  const textY = titleBarY + titleBarHeight / 2 + 3; // Center in bar
+  // Draw title text (black color, no background)
+  const textY = borderMargin + 35; // Position below border margin
   pdf.setFontSize(design.titleFontSize);
   pdf.setFont("helvetica", "bold");
-  pdf.setTextColor(
-    colors.titleText[0],
-    colors.titleText[1],
-    colors.titleText[2]
-  );
+  pdf.setTextColor(0, 0, 0); // Black text
   pdf.text(title, x, textY, { align: "center" });
 
   // Reset text color
@@ -1077,13 +1049,17 @@ const drawTableOfContentsMulti = (
   // Layout constants - optimized for maximum space usage
   const titleY = 40;
   const margin = 15; // Reduced from 18
-  const contentStartY = titleY + 25; // Reduced from 30
-  const bottomLimit = pageHeight; // Further reduced (footer is at pageHeight - 15, only 2mm buffer)
+  const contentStartY = titleY + 25; // Reduced from 30 (for first page with title)
+  const contentStartYNoTitle = borderMargin + 10; // For pages without title (page 2+)
+  const bottomLimitFirstPage = pageHeight - 15; // First page with footer space
+  const bottomLimitOtherPages = pageHeight - 10; // Other pages, use more space
   const lineHeight = 9.5; // Further reduced from 10 for tighter spacing
   const sectionSpacing = 3; // Further reduced from 4
   const columnGap = 15; // Reduced from 20
   const contentWidth = pageWidth - 2 * margin;
-  const rowsPerColumn = Math.floor((bottomLimit - contentStartY) / lineHeight);
+  const rowsPerColumn = Math.floor(
+    (bottomLimitFirstPage - contentStartY) / lineHeight
+  );
 
   // Structure:
   // Part 1: Introduction (full width) + How To Play (full width) = 2 rows
@@ -1100,6 +1076,7 @@ const drawTableOfContentsMulti = (
 
   let currentPage = 0;
   let currentY = contentStartY;
+  let currentBottomLimit = bottomLimitFirstPage; // Track bottom limit for current page
 
   // Helper to start a new page
   const startNewPage = () => {
@@ -1114,9 +1091,8 @@ const drawTableOfContentsMulti = (
       pdf.addPage();
     }
     currentPage++;
-    currentY = contentStartY;
 
-    // Draw page background + title
+    // Draw page background
     drawPageBackground(
       pdf,
       pageWidth,
@@ -1128,17 +1104,26 @@ const drawTableOfContentsMulti = (
       design
     );
 
-    drawPageTitle(
-      pdf,
-      "TABLE OF CONTENTS",
-      pageWidth,
-      titleY,
-      150,
-      colors,
-      design,
-      borderMargin,
-      borderWidth
-    );
+    // Only draw title on first page
+    if (currentPage === 1) {
+      drawPageTitle(
+        pdf,
+        "TABLE OF CONTENTS",
+        pageWidth,
+        titleY,
+        150,
+        colors,
+        design,
+        borderMargin,
+        borderWidth
+      );
+      currentY = contentStartY;
+      currentBottomLimit = bottomLimitFirstPage;
+    } else {
+      // For subsequent pages, start content higher (no title) and use full page
+      currentY = contentStartYNoTitle; // Start much higher
+      currentBottomLimit = bottomLimitOtherPages; // Use more space
+    }
 
     pdf.setFontSize(14);
     pdf.setFont("helvetica", "normal");
@@ -1149,7 +1134,7 @@ const drawTableOfContentsMulti = (
   startNewPage();
 
   // Part 1: Introduction and How To Play (full width, bold and larger)
-  if (currentY + lineHeight > bottomLimit) {
+  if (currentY + lineHeight > currentBottomLimit) {
     startNewPage();
   }
   currentY = drawFullWidthTOCEntry(
@@ -1165,12 +1150,11 @@ const drawTableOfContentsMulti = (
   );
 
   // Check if we exceeded bottom limit after drawing (in case text wrapped)
-  if (currentY > bottomLimit) {
+  if (currentY > currentBottomLimit) {
     startNewPage();
-    currentY = contentStartY;
   }
 
-  if (currentY + lineHeight > bottomLimit) {
+  if (currentY + lineHeight > currentBottomLimit) {
     startNewPage();
   }
   currentY = drawFullWidthTOCEntry(
@@ -1186,16 +1170,15 @@ const drawTableOfContentsMulti = (
   );
 
   // Check if we exceeded bottom limit after drawing
-  if (currentY > bottomLimit) {
+  if (currentY > currentBottomLimit) {
     startNewPage();
-    currentY = contentStartY;
   }
 
   // Add spacing before Part 2
   currentY += sectionSpacing * 0.4; // Further reduced spacing
 
   // Part 2: "Word search by topic" header styled like introduction headings
-  if (currentY + lineHeight > bottomLimit) {
+  if (currentY + lineHeight > currentBottomLimit) {
     startNewPage();
   }
   currentY = drawTocSectionHeading(
@@ -1233,11 +1216,10 @@ const drawTableOfContentsMulti = (
     }
 
     // Check if we need a new page
-    if (rowStartY + lineHeight * 3 > bottomLimit) {
+    if (rowStartY + lineHeight * 3 > currentBottomLimit) {
       startNewPage();
-      rowStartY = contentStartY;
-      currentY = contentStartY;
-      rowMaxY = contentStartY;
+      rowStartY = currentY; // Use currentY which is set by startNewPage
+      rowMaxY = currentY;
       topicsInCurrentRow = 0;
     }
 
@@ -1264,15 +1246,14 @@ const drawTableOfContentsMulti = (
     }
 
     // Check if text wrapped and exceeded bottom limit
-    if (rowMaxY > bottomLimit) {
+    if (rowMaxY > currentBottomLimit) {
       startNewPage();
-      rowStartY = contentStartY;
-      currentY = contentStartY;
-      rowMaxY = contentStartY;
+      rowStartY = currentY; // Use currentY which is set by startNewPage
+      rowMaxY = currentY;
       topicsInCurrentRow = 0;
       // Redraw on new page
       const redrawX = margin;
-      const redrawY = contentStartY;
+      const redrawY = currentY;
       rowMaxY = drawTwoColumnTOCEntry(
         pdf,
         topic,
@@ -1294,9 +1275,8 @@ const drawTableOfContentsMulti = (
   currentY += sectionSpacing * 0.4; // Further reduced spacing before Answer section
 
   // Part 3: Answer (full width with circle, bold and larger)
-  if (currentY + lineHeight > bottomLimit) {
+  if (currentY + lineHeight > currentBottomLimit) {
     startNewPage();
-    currentY = contentStartY;
   }
   currentY = drawFullWidthTOCEntry(
     pdf,
@@ -1311,9 +1291,8 @@ const drawTableOfContentsMulti = (
   );
 
   // Check if we exceeded bottom limit after drawing
-  if (currentY > bottomLimit) {
+  if (currentY > currentBottomLimit) {
     startNewPage();
-    currentY = contentStartY;
   }
 
   // Draw footer on last page (TOC pages don't have page numbers)
@@ -2057,20 +2036,22 @@ const renderPage = (
     design
   );
 
-  // Draw title
+  // Draw title only if provided and not empty
   const titleY = options.titleY || 40;
   const titleWidth = options.titleWidth || 150;
-  drawPageTitle(
-    pdf,
-    options.title,
-    pageWidth,
-    titleY,
-    titleWidth,
-    colors,
-    design,
-    borderMargin,
-    borderWidth
-  );
+  if (options.title && options.title.trim() !== "") {
+    drawPageTitle(
+      pdf,
+      options.title,
+      pageWidth,
+      titleY,
+      titleWidth,
+      colors,
+      design,
+      borderMargin,
+      borderWidth
+    );
+  }
 
   // Draw subtitle if provided
   let currentY = titleY;
@@ -2391,7 +2372,7 @@ export async function POST(request: NextRequest) {
         colors,
         design,
         {
-          title: gridTitleText,
+          title: "", // No title for grid page
           pageNumber: gridPageNumber,
           footerNote: `Answers on page ${answerPageNumber}`,
           contentRenderer: (pdf) => {
