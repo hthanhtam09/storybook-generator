@@ -43,10 +43,10 @@ export class WordFillInGenerator {
     const placedWords: WordFillInWord[] = [];
     const usedWords = new Set<string>();
 
-    // Sort words by length (longest first) for better placement
-    const sortedWords = [...words].sort((a, b) => b.length - a.length);
+    // Shuffle words to randomize placement order
+    const shuffledWords = [...words].sort(() => Math.random() - 0.5);
 
-    for (const word of sortedWords) {
+    for (const word of shuffledWords) {
       if (usedWords.has(word.toLowerCase())) continue;
 
       const placement = this.findBestPlacement(
@@ -61,7 +61,7 @@ export class WordFillInGenerator {
       }
     }
 
-    // Fill remaining empty cells with random black squares
+    // Fill remaining empty cells with random distribution of black/white
     this.fillEmptyCells(grid, gridSize);
 
     return {
@@ -106,35 +106,51 @@ export class WordFillInGenerator {
       score: number;
     }> = [];
 
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
-        // Try horizontal placement
-        if (col + word.length <= gridSize) {
-          const score = this.calculatePlacementScore(
-            word,
-            row,
-            col,
-            "horizontal",
-            grid,
-            placedWords
-          );
-          if (score > 0) {
-            positions.push({ row, col, direction: "horizontal", score });
-          }
-        }
+    // Create randomized order of positions to scan
+    const rowIndices = Array.from({ length: gridSize }, (_, i) => i).sort(
+      () => Math.random() - 0.5
+    );
+    const colIndices = Array.from({ length: gridSize }, (_, i) => i).sort(
+      () => Math.random() - 0.5
+    );
 
-        // Try vertical placement
-        if (row + word.length <= gridSize) {
-          const score = this.calculatePlacementScore(
-            word,
-            row,
-            col,
-            "vertical",
-            grid,
-            placedWords
-          );
-          if (score > 0) {
-            positions.push({ row, col, direction: "vertical", score });
+    for (const row of rowIndices) {
+      for (const col of colIndices) {
+        // Randomize direction order
+        const directions: Array<"horizontal" | "vertical"> =
+          Math.random() > 0.5 ? ["horizontal", "vertical"] : ["vertical", "horizontal"];
+
+        for (const direction of directions) {
+          if (direction === "horizontal" && col + word.length <= gridSize) {
+            const score = this.calculatePlacementScore(
+              word,
+              row,
+              col,
+              "horizontal",
+              grid,
+              placedWords
+            );
+            if (score > 0) {
+              // Add random jitter to score for more variety
+              const jitteredScore = score + (Math.random() - 0.5) * 2;
+              positions.push({ row, col, direction: "horizontal", score: jitteredScore });
+            }
+          }
+
+          if (direction === "vertical" && row + word.length <= gridSize) {
+            const score = this.calculatePlacementScore(
+              word,
+              row,
+              col,
+              "vertical",
+              grid,
+              placedWords
+            );
+            if (score > 0) {
+              // Add random jitter to score for more variety
+              const jitteredScore = score + (Math.random() - 0.5) * 2;
+              positions.push({ row, col, direction: "vertical", score: jitteredScore });
+            }
           }
         }
       }
@@ -142,9 +158,36 @@ export class WordFillInGenerator {
 
     if (positions.length === 0) return null;
 
-    // Sort by score (higher is better) and return the best position
+    // Sort by score (higher is better)
     positions.sort((a, b) => b.score - a.score);
-    return positions[0];
+
+    // Use weighted random selection from top candidates
+    // Take top 30% of positions and randomly select from them
+    const topCount = Math.max(1, Math.floor(positions.length * 0.3));
+    const topCandidates = positions.slice(0, topCount);
+
+    // Weighted random: higher score = higher probability
+    const totalScore = topCandidates.reduce((sum, pos) => sum + pos.score, 0);
+    if (totalScore === 0) return topCandidates[0];
+
+    let random = Math.random() * totalScore;
+    for (const candidate of topCandidates) {
+      random -= candidate.score;
+      if (random <= 0) {
+        return {
+          row: candidate.row,
+          col: candidate.col,
+          direction: candidate.direction,
+        };
+      }
+    }
+
+    // Fallback to best position
+    return {
+      row: topCandidates[0].row,
+      col: topCandidates[0].col,
+      direction: topCandidates[0].direction,
+    };
   }
 
   private static calculatePlacementScore(
@@ -222,12 +265,39 @@ export class WordFillInGenerator {
     grid: WordFillInCell[][],
     gridSize: number
   ): void {
-    // Make all empty cells black by default
+    // Collect all empty cells
+    const emptyCells: Array<{ row: number; col: number }> = [];
     for (let row = 0; row < gridSize; row++) {
       for (let col = 0; col < gridSize; col++) {
         if (grid[row][col].letter === null) {
-          grid[row][col].isBlack = true;
+          emptyCells.push({ row, col });
         }
+      }
+    }
+
+    // Shuffle empty cells to randomize distribution
+    emptyCells.sort(() => Math.random() - 0.5);
+
+    // Calculate how many cells should be black vs white
+    // Aim for roughly 40-60% black cells for good puzzle balance
+    const blackRatio = 0.4 + Math.random() * 0.2; // 40-60%
+    const blackCount = Math.floor(emptyCells.length * blackRatio);
+
+    // Randomly assign black cells
+    for (let i = 0; i < emptyCells.length; i++) {
+      const cell = emptyCells[i];
+      if (i < blackCount) {
+        grid[cell.row][cell.col].isBlack = true;
+      } else {
+        // All white cells must have letters - fill with random letter
+        const randomLetter = String.fromCharCode(
+          65 + Math.floor(Math.random() * 26)
+        ); // A-Z
+        grid[cell.row][cell.col] = {
+          letter: randomLetter,
+          isBlack: false,
+          isRevealed: false,
+        };
       }
     }
 
