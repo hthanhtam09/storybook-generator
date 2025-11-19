@@ -138,7 +138,35 @@ const LINE_HEIGHT = {
 } as const;
 
 /**
+ * Helper function to check if a character is a word character (Unicode-aware)
+ */
+function isWordChar(char: string): boolean {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  // Check for Unicode letter categories (includes accented characters, etc.)
+  return (
+    (code >= 0x41 && code <= 0x5a) || // A-Z
+    (code >= 0x61 && code <= 0x7a) || // a-z
+    (code >= 0x30 && code <= 0x39) || // 0-9
+    code === 0x5f || // _
+    code >= 0xc0 || // Extended ASCII and Unicode letters (å, ä, ö, etc.)
+    /[\p{L}\p{N}_]/u.test(char) // Unicode letter or number
+  );
+}
+
+/**
+ * Helper function to check if a position in text is a word boundary (Unicode-aware)
+ */
+function isWordBoundary(text: string, pos: number): boolean {
+  if (pos === 0 || pos === text.length) return true;
+  const prevChar = text[pos - 1];
+  const nextChar = text[pos];
+  return !isWordChar(prevChar) || !isWordChar(nextChar);
+}
+
+/**
  * Helper function to create text runs with vocabulary words bolded
+ * Handles Unicode characters and inflected forms (e.g., "Julbock" → "Julbocken")
  */
 function createTextRunsWithBoldVocabulary(
   text: string,
@@ -150,37 +178,142 @@ function createTextRunsWithBoldVocabulary(
     return [createTextRun({ text, size, font })];
   }
 
-  // Create a regex pattern that matches any vocabulary word (case-insensitive, whole word)
   // Sort by length descending to match longer phrases first
   const sortedWords = [...vocabularyWords].sort((a, b) => b.length - a.length);
-  const pattern = sortedWords
-    .map((word) => {
-      // Escape special regex characters and handle multi-word phrases
-      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      return `\\b${escaped}\\b`;
-    })
-    .join("|");
 
-  const regex = new RegExp(`(${pattern})`, "gi");
-  const parts = text.split(regex);
-  const textRuns: TextRun[] = [];
+  // Create match positions: [start, end, wordIndex]
+  const matches: Array<[number, number, number]> = [];
 
-  for (const part of parts) {
-    if (!part) continue;
+  for (let wordIndex = 0; wordIndex < sortedWords.length; wordIndex++) {
+    const word = sortedWords[wordIndex];
+    const wordLower = word.toLowerCase();
+    const wordLength = word.length;
 
-    // Check if this part matches any vocabulary word
-    const isVocabWord = vocabularyWords.some(
-      (word) => word.toLowerCase() === part.toLowerCase()
+    // Escape special regex characters
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    // First, try exact matches (case-insensitive)
+    const exactRegex = new RegExp(escaped, "gi");
+    let match;
+
+    // Reset regex lastIndex to avoid issues with global regex
+    exactRegex.lastIndex = 0;
+
+    while ((match = exactRegex.exec(text)) !== null) {
+      const start = match.index;
+      const end = start + match[0].length;
+
+      // Check if it's at a word boundary (start and end)
+      if (isWordBoundary(text, start) && isWordBoundary(text, end)) {
+        // Check if this match overlaps with an existing match
+        const overlaps = matches.some(
+          ([existingStart, existingEnd]) =>
+            start < existingEnd && end > existingStart
+        );
+
+        if (!overlaps) {
+          matches.push([start, end, wordIndex]);
+        }
+      }
+    }
+
+    // Also try to match inflected forms (words that start with the vocabulary word)
+    // This handles cases like "Julbock" → "Julbocken", "Tala" → "talar"
+    // We'll search manually to avoid \b issues with Unicode
+    let searchIndex = 0;
+    while (searchIndex < text.length) {
+      const remainingText = text.substring(searchIndex);
+      const lowerRemaining = remainingText.toLowerCase();
+      const wordIndexInText = lowerRemaining.indexOf(wordLower);
+
+      if (wordIndexInText === -1) break;
+
+      const absoluteStart = searchIndex + wordIndexInText;
+      const absoluteEnd = absoluteStart + wordLength;
+
+      // Check if it's at a word boundary (start)
+      if (isWordBoundary(text, absoluteStart)) {
+        // Try to extend the match to include inflected forms
+        // Look for the end of the word (non-word character or end of string)
+        let extendedEnd = absoluteEnd;
+        while (extendedEnd < text.length && isWordChar(text[extendedEnd])) {
+          extendedEnd++;
+        }
+
+        const matchedText = text.substring(absoluteStart, extendedEnd);
+
+        // Only match if the matched text starts with the vocabulary word
+        // and is at least as long as the vocabulary word
+        if (
+          matchedText.toLowerCase().startsWith(wordLower) &&
+          matchedText.length >= wordLength
+        ) {
+          // Check if this match overlaps with an existing match
+          const overlaps = matches.some(
+            ([existingStart, existingEnd]) =>
+              absoluteStart < existingEnd && extendedEnd > existingStart
+          );
+
+          if (!overlaps) {
+            matches.push([absoluteStart, extendedEnd, wordIndex]);
+          }
+        }
+      }
+
+      // Move search index forward
+      searchIndex = absoluteStart + 1;
+    }
+  }
+
+  // Sort matches by start position
+  matches.sort((a, b) => a[0] - b[0]);
+
+  // Remove overlapping matches (keep the first one)
+  const nonOverlappingMatches: Array<[number, number, number]> = [];
+  for (const match of matches) {
+    const [start, end] = match;
+    const overlaps = nonOverlappingMatches.some(
+      ([existingStart, existingEnd]) =>
+        start < existingEnd && end > existingStart
     );
+    if (!overlaps) {
+      nonOverlappingMatches.push(match);
+    }
+  }
 
+  // Build text runs
+  const textRuns: TextRun[] = [];
+  let lastIndex = 0;
+
+  for (const [start, end, wordIndex] of nonOverlappingMatches) {
+    // Add text before the match
+    if (start > lastIndex) {
+      const beforeText = text.substring(lastIndex, start);
+      if (beforeText) {
+        textRuns.push(createTextRun({ text: beforeText, size, font }));
+      }
+    }
+
+    // Add the matched vocabulary word (bold)
+    const matchedText = text.substring(start, end);
     textRuns.push(
       createTextRun({
-        text: part,
+        text: matchedText,
         size,
         font,
-        bold: isVocabWord,
+        bold: true,
       })
     );
+
+    lastIndex = end;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    const remainingText = text.substring(lastIndex);
+    if (remainingText) {
+      textRuns.push(createTextRun({ text: remainingText, size, font }));
+    }
   }
 
   return textRuns.length > 0 ? textRuns : [createTextRun({ text, size, font })];
