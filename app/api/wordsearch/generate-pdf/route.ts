@@ -528,14 +528,33 @@ const drawDecorativeTitle = (
   borderMargin: number,
   borderWidth: number
 ) => {
-  // Draw title text (black color, no background)
-  const textY = borderMargin + 35; // Position below border margin
+  const baseY = y || borderMargin + 35;
+  const innerPadding =
+    borderMargin + design.borderThickness * design.borderLayers + 4;
+  const maxAllowedWidth = Math.max(40, borderWidth - innerPadding * 2);
+  const desiredWidth = width || maxAllowedWidth;
+  const maxTextWidth = Math.max(40, Math.min(desiredWidth, maxAllowedWidth));
+
   pdf.setFontSize(design.titleFontSize);
   pdf.setFont("helvetica", "bold");
-  pdf.setTextColor(0, 0, 0); // Black text
-  pdf.text(title, x, textY, { align: "center" });
+  pdf.setTextColor(0, 0, 0);
 
-  // Reset text color
+  const lines = pdf
+    .splitTextToSize(title, maxTextWidth)
+    .filter((line: string) => line.trim().length > 0);
+  const lineHeight = design.titleFontSize * 0.7;
+  const totalHeight = (lines.length === 0 ? 1 : lines.length) * lineHeight;
+  let currentY = baseY - totalHeight / 2 + lineHeight / 2;
+
+  if (lines.length === 0) {
+    pdf.text(title, x, baseY, { align: "center" });
+  } else {
+    lines.forEach((line: string) => {
+      pdf.text(line, x, currentY, { align: "center" });
+      currentY += lineHeight;
+    });
+  }
+
   pdf.setTextColor(0, 0, 0);
 };
 
@@ -2349,10 +2368,6 @@ export async function POST(request: NextRequest) {
 
       // Page 2: Grid only
       pdf.addPage();
-
-      const gridTopicTitle =
-        topicTitles[index] || config.theme || "WORD SEARCH";
-      const gridTitleText = `${gridTopicTitle.toUpperCase()}`;
 
       // Calculate answer page number for this grid
       // Answer pages show 4 grids per page (2x2)
