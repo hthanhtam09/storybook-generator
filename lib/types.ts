@@ -138,6 +138,7 @@ export interface WordFillInPuzzle {
   grid: WordFillInCell[][];
   words: WordFillInWord[];
   wordList: string[];
+  droppedWords?: string[];
   config: WordFillInConfig;
 }
 

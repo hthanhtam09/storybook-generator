@@ -13,7 +13,13 @@ import { AlertCircle, Download, RefreshCw, Upload, X } from "lucide-react";
 import type { WordFillInPage } from "@/lib/types";
 import { WordFillInGenerator } from "@/lib/wordfillin-generator";
 
-const GRID_SIZE = 15;
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const chunkPuzzles = (pages: WordFillInPage[]): WordFillInPage[][] => {
   if (!pages.length) return [];
@@ -36,6 +42,7 @@ export default function WordFillInPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [bulkImportText, setBulkImportText] = useState("");
   const [bulkImportError, setBulkImportError] = useState("");
+  const [gridSize, setGridSize] = useState(15);
 
   // Calculate total words from all topics
   const wordList = useMemo(() => {
@@ -179,7 +186,7 @@ export default function WordFillInPage() {
         const topicPuzzles = WordFillInGenerator.generatePuzzles({
           words: topic.words,
           pages: 1, // 1 puzzle per topic
-          gridSize: GRID_SIZE,
+          gridSize: gridSize,
           showAnswers: false,
         });
         // Update page number to match topic index
@@ -194,7 +201,7 @@ export default function WordFillInPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [topics]);
+  }, [topics, gridSize]);
 
   const handleDownload = useCallback(async () => {
     if (!puzzles.length) return;
@@ -291,8 +298,8 @@ export default function WordFillInPage() {
 
   const renderPuzzleCard = (page: WordFillInPage) => {
     const { puzzle } = page;
-    const rowCount = puzzle.grid.length || GRID_SIZE;
-    const columnCount = puzzle.grid[0]?.length || GRID_SIZE;
+    const rowCount = puzzle.grid.length || gridSize;
+    const columnCount = puzzle.grid[0]?.length || gridSize;
     const wordGroups = groupWordsByLength(puzzle.wordList);
 
     return (
@@ -415,7 +422,46 @@ export default function WordFillInPage() {
           </div>
 
           <div className="space-y-6 px-5 py-6">
-            {/* Bulk Import Section */}
+            {/* Settings Section */}
+            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+              <Label className="text-xs uppercase">Cấu hình Grid</Label>
+              <Select
+                value={gridSize.toString()}
+                onValueChange={(value) => setGridSize(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn kích thước" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="13">13x13 (Dễ)</SelectItem>
+                  <SelectItem value="15">15x15 (Trung bình)</SelectItem>
+                  <SelectItem value="17">17x17 (Khó)</SelectItem>
+                  <SelectItem value="21">21x21 (Rất khó)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Dropped Words Warning */}
+            {puzzles.some(p => p.puzzle.droppedWords && p.puzzle.droppedWords.length > 0) && (
+              <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 p-3">
+                <div className="flex items-center gap-2 text-yellow-600 mb-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <p className="text-sm font-medium">Một số từ không thể xếp vào lưới:</p>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  {puzzles.map((page) => {
+                    if (!page.puzzle.droppedWords?.length) return null;
+                    return (
+                      <div key={page.puzzle.id}>
+                        <span className="font-semibold">Puzzle #{page.pageNumber}:</span>{" "}
+                        {page.puzzle.droppedWords.join(", ")}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3 rounded-lg border border-dashed border-border bg-muted/30 p-4">
               <div className="space-y-2">
                 <Label htmlFor="bulk-import" className="text-xs uppercase">
@@ -458,6 +504,10 @@ santa, claus, jolly, red, suit, white, beard, hat, pom-pom, belt, buckle, boots,
             </div>
 
             <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Kích thước lưới</span>
+                <span>{gridSize}x{gridSize}</span>
+              </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Số topic</span>
                 <span>{topics.length}</span>

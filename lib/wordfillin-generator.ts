@@ -27,7 +27,7 @@ export class WordFillInGenerator {
       const pageWords = validWords.slice(startIndex, endIndex);
 
       if (pageWords.length > 0) {
-        const puzzle = this.generatePuzzle(pageWords, gridSize, pageNum);
+        const puzzle = this.generatePuzzle(pageWords, pageNum, gridSize);
         resultPages.push({
           pageNumber: pageNum,
           puzzle,
@@ -40,39 +40,87 @@ export class WordFillInGenerator {
 
   private static generatePuzzle(
     words: string[],
-    gridSize: number,
-    pageNumber: number
+    pageNumber: number,
+    gridSize: number = 15
   ): WordFillInPuzzle {
-    const grid: WordFillInCell[][] = this.createEmptyGrid(gridSize);
-    const placedWords: WordFillInWord[] = [];
-    const usedWords = new Set<string>();
+    let bestResult: {
+      grid: WordFillInCell[][];
+      placedWords: WordFillInWord[];
+      usedWords: Set<string>;
+      droppedWords: string[];
+      spreadScore: number;
+    } | null = null;
 
-    // Sort words by length (longest first) to make placement easier
-    // And ensure no short words slip through
-    const sortedWords = [...words]
-      .filter(w => w.length >= 2)
-      .sort((a, b) => b.length - a.length);
+    // Try multiple attempts to find the best layout
+    const ATTEMPTS = 50;
 
-    for (const word of sortedWords) {
-      if (usedWords.has(word.toLowerCase())) continue;
+    for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+      const grid = this.createEmptyGrid(gridSize);
+      const placedWords: WordFillInWord[] = [];
+      const usedWords = new Set<string>();
 
-      const placement = this.findBestPlacement(
-        word,
-        grid,
-        placedWords,
-        gridSize
-      );
-      if (placement) {
-        this.placeWord(word, placement, grid, placedWords);
-        usedWords.add(word.toLowerCase());
+      // Shuffle words first, then sort by length descending
+      // This ensures words of the same length are in random order
+      const sortedWords = [...words].filter((w) => w.length >= 2);
+      for (let i = sortedWords.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [sortedWords[i], sortedWords[j]] = [sortedWords[j], sortedWords[i]];
       }
+      sortedWords.sort((a, b) => b.length - a.length);
+
+      // Try to place words
+      this.backtrackPlace(sortedWords, grid, placedWords, usedWords, gridSize);
+
+      const droppedWords = sortedWords.filter(
+        (w) => !usedWords.has(w.toLowerCase())
+      );
+
+      // Calculate Spread Score (Bounding Box Area)
+      let minR = gridSize, maxR = -1, minC = gridSize, maxC = -1;
+      if (placedWords.length > 0) {
+        for (const pw of placedWords) {
+            const endRow = pw.direction === "vertical" ? pw.startRow + pw.word.length - 1 : pw.startRow;
+            const endCol = pw.direction === "horizontal" ? pw.startCol + pw.word.length - 1 : pw.startCol;
+            
+            minR = Math.min(minR, pw.startRow);
+            maxR = Math.max(maxR, endRow);
+            minC = Math.min(minC, pw.startCol);
+            maxC = Math.max(maxC, endCol);
+        }
+      }
+      const spreadScore = (maxR - minR + 1) * (maxC - minC + 1);
+
+      // Score this attempt
+      // Priority 1: Most words placed (Fewest dropped)
+      // Priority 2: Largest Spread (Least clumping)
+      if (
+        !bestResult ||
+        droppedWords.length < bestResult.droppedWords.length ||
+        (droppedWords.length === bestResult.droppedWords.length &&
+          spreadScore > bestResult.spreadScore)
+      ) {
+        bestResult = {
+          grid,
+          placedWords,
+          usedWords,
+          droppedWords,
+          spreadScore,
+        };
+      }
+
+      // If perfect result (no drops and good spread), we could stop, 
+      // but let's use all attempts to find the best spread.
+    }
+
+    if (!bestResult) {
+        throw new Error("Failed to generate puzzle");
     }
 
     // Finalize grid: Mark all empty cells as black
     for (let r = 0; r < gridSize; r++) {
       for (let c = 0; c < gridSize; c++) {
-        if (grid[r][c].letter === null) {
-          grid[r][c].isBlack = true;
+        if (bestResult.grid[r][c].letter === null) {
+          bestResult.grid[r][c].isBlack = true;
         }
       }
     }
@@ -80,11 +128,12 @@ export class WordFillInGenerator {
     return {
       id: `puzzle-${pageNumber}-${Date.now()}`,
       pageNumber,
-      grid,
-      words: placedWords,
-      wordList: Array.from(usedWords).sort(),
+      grid: bestResult.grid,
+      words: bestResult.placedWords,
+      wordList: Array.from(bestResult.usedWords).sort(),
+      droppedWords: bestResult.droppedWords,
       config: {
-        words: Array.from(usedWords),
+        words: Array.from(bestResult.usedWords),
         pages: 1,
         gridSize,
         showAnswers: false,
@@ -106,101 +155,151 @@ export class WordFillInGenerator {
       );
   }
 
-  private static findBestPlacement(
+  private static backtrackPlace(
+    wordsToPlace: string[],
+    grid: WordFillInCell[][],
+    placedWords: WordFillInWord[],
+    usedWords: Set<string>,
+    gridSize: number
+  ): boolean {
+    if (wordsToPlace.length === 0) {
+      return true;
+    }
+
+    const currentWord = wordsToPlace[0];
+    const remainingWords = wordsToPlace.slice(1);
+
+    // If word is already used (duplicate input), skip it
+    if (usedWords.has(currentWord.toLowerCase())) {
+      return this.backtrackPlace(remainingWords, grid, placedWords, usedWords, gridSize);
+    }
+
+    // Find all possible placements for the current word
+    const candidates = this.findAllPlacements(currentWord, grid, placedWords, gridSize);
+
+    // Randomize the top candidates to avoid deterministic clumping
+    // We take the top 10 best scoring positions and shuffle them
+    const topCandidates = candidates.slice(0, 10);
+    for (let i = topCandidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [topCandidates[i], topCandidates[j]] = [topCandidates[j], topCandidates[i]];
+    }
+
+    for (const placement of topCandidates) {
+      // Apply placement
+      const cellsBackup = this.applyPlacement(currentWord, placement, grid, placedWords);
+      usedWords.add(currentWord.toLowerCase());
+
+      // Recurse
+      if (this.backtrackPlace(remainingWords, grid, placedWords, usedWords, gridSize)) {
+        return true;
+      }
+
+      // Backtrack: Undo placement
+      this.undoPlacement(grid, placedWords, cellsBackup);
+      usedWords.delete(currentWord.toLowerCase());
+    }
+
+    // If we can't place the current word, skip it and try placing the rest
+    return this.backtrackPlace(remainingWords, grid, placedWords, usedWords, gridSize);
+  }
+
+  private static findAllPlacements(
     word: string,
     grid: WordFillInCell[][],
     placedWords: WordFillInWord[],
     gridSize: number
-  ): { row: number; col: number; direction: "horizontal" | "vertical" } | null {
-    const positions: Array<{
+  ): Array<{ row: number; col: number; direction: "horizontal" | "vertical"; score: number }> {
+    const candidates: Array<{
       row: number;
       col: number;
       direction: "horizontal" | "vertical";
       score: number;
     }> = [];
 
-    // Create randomized order of positions to scan
-    const rowIndices = Array.from({ length: gridSize }, (_, i) => i).sort(
-      () => Math.random() - 0.5
-    );
-    const colIndices = Array.from({ length: gridSize }, (_, i) => i).sort(
-      () => Math.random() - 0.5
-    );
+    // Check all positions
+    for (let row = 0; row < gridSize; row++) {
+      for (let col = 0; col < gridSize; col++) {
+        for (const direction of ["horizontal", "vertical"] as const) {
+          if (direction === "horizontal" && col + word.length > gridSize) continue;
+          if (direction === "vertical" && row + word.length > gridSize) continue;
 
-    for (const row of rowIndices) {
-      for (const col of colIndices) {
-        // Randomize direction order
-        const directions: Array<"horizontal" | "vertical"> =
-          Math.random() > 0.5 ? ["horizontal", "vertical"] : ["vertical", "horizontal"];
+          const score = this.calculatePlacementScore(
+            word,
+            row,
+            col,
+            direction,
+            grid,
+            placedWords
+          );
 
-        for (const direction of directions) {
-          if (direction === "horizontal" && col + word.length <= gridSize) {
-            const score = this.calculatePlacementScore(
-              word,
-              row,
-              col,
-              "horizontal",
-              grid,
-              placedWords
-            );
-            if (score > 0) {
-              // Add random jitter to score for more variety
-              const jitteredScore = score + (Math.random() - 0.5) * 2;
-              positions.push({ row, col, direction: "horizontal", score: jitteredScore });
-            }
-          }
-
-          if (direction === "vertical" && row + word.length <= gridSize) {
-            const score = this.calculatePlacementScore(
-              word,
-              row,
-              col,
-              "vertical",
-              grid,
-              placedWords
-            );
-            if (score > 0) {
-              // Add random jitter to score for more variety
-              const jitteredScore = score + (Math.random() - 0.5) * 2;
-              positions.push({ row, col, direction: "vertical", score: jitteredScore });
-            }
+          if (score > 0) {
+            candidates.push({ row, col, direction, score });
           }
         }
       }
     }
 
-    if (positions.length === 0) return null;
+    // Sort by score desc
+    return candidates.sort((a, b) => b.score - a.score);
+  }
 
-    // Sort by score (higher is better)
-    positions.sort((a, b) => b.score - a.score);
+  private static applyPlacement(
+    word: string,
+    placement: { row: number; col: number; direction: "horizontal" | "vertical" },
+    grid: WordFillInCell[][],
+    placedWords: WordFillInWord[]
+  ): Array<{ row: number; col: number; oldCell: WordFillInCell }> {
+    const { row, col, direction } = placement;
+    const backup: Array<{ row: number; col: number; oldCell: WordFillInCell }> = [];
+    const cells: { row: number; col: number }[] = [];
 
-    // Use weighted random selection from top candidates
-    // Take top 30% of positions and randomly select from them
-    const topCount = Math.max(1, Math.floor(positions.length * 0.3));
-    const topCandidates = positions.slice(0, topCount);
+    for (let i = 0; i < word.length; i++) {
+      const r = direction === "horizontal" ? row : row + i;
+      const c = direction === "horizontal" ? col + i : col;
 
-    // Weighted random: higher score = higher probability
-    const totalScore = topCandidates.reduce((sum, pos) => sum + pos.score, 0);
-    if (totalScore === 0) return topCandidates[0];
+      // Save state for backtracking
+      backup.push({ 
+        row: r, 
+        col: c, 
+        oldCell: { ...grid[r][c] } 
+      });
 
-    let random = Math.random() * totalScore;
-    for (const candidate of topCandidates) {
-      random -= candidate.score;
-      if (random <= 0) {
-        return {
-          row: candidate.row,
-          col: candidate.col,
-          direction: candidate.direction,
-        };
-      }
+      grid[r][c] = {
+        letter: word[i].toUpperCase(),
+        isBlack: false,
+        isRevealed: false,
+        wordId: `word-${placedWords.length}`,
+        position: i,
+      };
+
+      cells.push({ row: r, col: c });
     }
 
-    // Fallback to best position
-    return {
-      row: topCandidates[0].row,
-      col: topCandidates[0].col,
-      direction: topCandidates[0].direction,
-    };
+    placedWords.push({
+      id: `word-${placedWords.length}`,
+      word: word.toUpperCase(),
+      startRow: row,
+      startCol: col,
+      direction,
+      cells,
+    });
+
+    return backup;
+  }
+
+  private static undoPlacement(
+    grid: WordFillInCell[][],
+    placedWords: WordFillInWord[],
+    backup: Array<{ row: number; col: number; oldCell: WordFillInCell }>
+  ) {
+    // Remove word from list
+    placedWords.pop();
+
+    // Restore grid cells
+    for (const { row, col, oldCell } of backup) {
+      grid[row][col] = oldCell;
+    }
   }
 
   private static calculatePlacementScore(
@@ -247,8 +346,6 @@ export class WordFillInGenerator {
       return -1;
     }
 
-
-
     for (let i = 0; i < word.length; i++) {
       const currentRow = direction === "horizontal" ? row : row + i;
       const currentCol = direction === "horizontal" ? col + i : col;
@@ -259,17 +356,11 @@ export class WordFillInGenerator {
         score += 1; // Empty cell
 
         // Check perpendicular neighbors (Side-Touching Rule)
-        // We only check neighbors if we are placing a NEW letter.
-        // If we are intersecting (cell.letter !== null), touching is expected/allowed.
         if (direction === "horizontal") {
-            // Check Top
             if (currentRow > 0 && grid[currentRow - 1][currentCol].letter !== null) return -1;
-            // Check Bottom
             if (currentRow < grid.length - 1 && grid[currentRow + 1][currentCol].letter !== null) return -1;
         } else {
-            // Check Left
             if (currentCol > 0 && grid[currentRow][currentCol - 1].letter !== null) return -1;
-            // Check Right
             if (currentCol < grid[0].length - 1 && grid[currentRow][currentCol + 1].letter !== null) return -1;
         }
 
@@ -281,53 +372,18 @@ export class WordFillInGenerator {
       }
     }
 
-    // Require at least one intersection for subsequent words to ensure connectivity
+    // Require at least one intersection for subsequent words
     if (placedWords.length > 0 && intersections === 0) {
         return -1; 
     }
 
     // Bonus for intersections
-    score += intersections * 3;
+    score += intersections * 5; // Increased weight for intersections
+
+    // Small random factor to break ties and encourage variety
+    score += Math.random() * 2;
 
     return score;
-  }
-
-  private static placeWord(
-    word: string,
-    placement: {
-      row: number;
-      col: number;
-      direction: "horizontal" | "vertical";
-    },
-    grid: WordFillInCell[][],
-    placedWords: WordFillInWord[]
-  ): void {
-    const { row, col, direction } = placement;
-    const cells: { row: number; col: number }[] = [];
-
-    for (let i = 0; i < word.length; i++) {
-      const currentRow = direction === "horizontal" ? row : row + i;
-      const currentCol = direction === "horizontal" ? col + i : col;
-
-      grid[currentRow][currentCol] = {
-        letter: word[i].toUpperCase(),
-        isBlack: false,
-        isRevealed: false,
-        wordId: `word-${placedWords.length}`,
-        position: i,
-      };
-
-      cells.push({ row: currentRow, col: currentCol });
-    }
-
-    placedWords.push({
-      id: `word-${placedWords.length}`,
-      word: word.toUpperCase(),
-      startRow: row,
-      startCol: col,
-      direction,
-      cells,
-    });
   }
 
   static revealAnswers(puzzle: WordFillInPuzzle): WordFillInPuzzle {
