@@ -5,8 +5,16 @@ import type { WordFillInPage } from "@/lib/types";
 const PAGE_WIDTH = 215.9; // 8.5 in
 const PAGE_HEIGHT = 279.4; // 11 in
 const PAGE_MARGIN = 15;
-const PUZZLES_PER_PAGE = 2;
+const PUZZLES_PER_PAGE = 1; // Changed to 1 per page to match book layout
+const ANSWERS_PER_PAGE = 4;
 const SECTION_GAP = 8;
+
+// Colors
+const COLOR_ORANGE = [243, 128, 54]; // #F38036
+const COLOR_LIGHT_ORANGE = [253, 233, 217]; // #FDE9D9
+const COLOR_TEXT_ORANGE = [211, 84, 0]; // #D35400
+const COLOR_BLACK = [0, 0, 0];
+const COLOR_WHITE = [255, 255, 255];
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,36 +33,33 @@ export async function POST(request: NextRequest) {
       format: [PAGE_WIDTH, PAGE_HEIGHT],
     });
 
-    const contentWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
-    const contentHeight = PAGE_HEIGHT - PAGE_MARGIN * 2;
-    const puzzleHeight =
-      (contentHeight - SECTION_GAP * (PUZZLES_PER_PAGE - 1)) / PUZZLES_PER_PAGE;
-
+    // 1. Render Puzzle Pages
     puzzles.forEach((page, index) => {
-      if (index > 0 && index % PUZZLES_PER_PAGE === 0) {
+      if (index > 0) {
         pdf.addPage();
       }
-
-      const slot = index % PUZZLES_PER_PAGE;
-      const originY =
-        PAGE_MARGIN + slot * (puzzleHeight + SECTION_GAP);
-
-      renderPuzzleSection(
-        pdf,
-        page,
-        PAGE_MARGIN,
-        originY,
-        contentWidth,
-        puzzleHeight
-      );
-
-      const isLastPuzzle = index === puzzles.length - 1;
-      const filledPage = slot === PUZZLES_PER_PAGE - 1;
-      if (isLastPuzzle || filledPage) {
-        const pageNumber = Math.ceil((index + 1) / PUZZLES_PER_PAGE);
-        drawPageFooter(pdf, pageNumber, PAGE_WIDTH, PAGE_HEIGHT);
-      }
+      renderPage(pdf, page, index);
     });
+
+    // 2. Render Answer Pages
+    const answerPagesCount = Math.ceil(puzzles.length / ANSWERS_PER_PAGE);
+    
+    for (let i = 0; i < answerPagesCount; i++) {
+      pdf.addPage();
+      const startIndex = i * ANSWERS_PER_PAGE;
+      const endIndex = Math.min(startIndex + ANSWERS_PER_PAGE, puzzles.length);
+      const pagePuzzles = puzzles.slice(startIndex, endIndex);
+      
+      // Calculate answer page number (starts after all puzzle pages)
+      // Assuming puzzle pages are 1 to puzzles.length
+      // Answer pages could be numbered continuously or separately. 
+      // Let's use continuous numbering for the PDF file itself, but the printed page number 
+      // in the footer might be different. 
+      // The user request said "Answers on page 192" in the puzzle footer.
+      // Let's just number them sequentially for now or use a fixed "Answer Key" header.
+      
+      renderAnswerPage(pdf, pagePuzzles, i + 1);
+    }
 
     const pdfBuffer = pdf.output("arraybuffer");
 
@@ -75,62 +80,123 @@ export async function POST(request: NextRequest) {
   }
 }
 
-const renderPuzzleSection = (
-  pdf: jsPDF,
-  page: WordFillInPage,
-  originX: number,
-  originY: number,
-  width: number,
-  height: number
-) => {
-  const { puzzle } = page;
-  const sectionPadding = 6;
-  const wordListWidth = width * 0.45; // Increased from 0.42 to give more space for words
-  const gridGap = 6; // Reduced from 8
-  const gridWidth = width - wordListWidth - gridGap - sectionPadding * 2;
-  const gridHeight = height - sectionPadding * 2 - 10;
+const renderPage = (pdf: jsPDF, page: WordFillInPage, index: number) => {
+  // Content Area
+  const contentX = PAGE_MARGIN; // Left margin
+  const contentWidth = PAGE_WIDTH - PAGE_MARGIN * 2; // Right margin
+  const contentY = 15;
 
-  // Section border
-  pdf.setDrawColor(210, 210, 210);
-  pdf.roundedRect(originX, originY, width, height, 3, 3, "S");
+  // 2. Header
+  const headerHeight = 25;
+  pdf.setFillColor(COLOR_ORANGE[0], COLOR_ORANGE[1], COLOR_ORANGE[2]);
+  pdf.rect(contentX, contentY, contentWidth, headerHeight, "F");
 
-  // Header
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text(
-    `Puzzle ${page.pageNumber}`,
-    originX + sectionPadding,
-    originY + sectionPadding + 4
-  );
+  pdf.setFontSize(32);
+  pdf.setTextColor(COLOR_WHITE[0], COLOR_WHITE[1], COLOR_WHITE[2]);
+  pdf.text(`${page.pageNumber}`, contentX + contentWidth / 2, contentY + 17, {
+    align: "center",
+  });
 
-  const contentY = originY + sectionPadding + 10; // Reduced from 12
-  const wordListX = originX + sectionPadding;
-  const gridX = originX + sectionPadding + wordListWidth + gridGap;
+  // 3. Word List
+  const wordListY = contentY + headerHeight;
+  const wordListHeight = 60; // Fixed height for word list area
+  
+  pdf.setFillColor(COLOR_LIGHT_ORANGE[0], COLOR_LIGHT_ORANGE[1], COLOR_LIGHT_ORANGE[2]);
+  pdf.rect(contentX, wordListY, contentWidth, wordListHeight, "F");
 
   renderWordList(
     pdf,
-    puzzle.wordList,
-    wordListX,
-    contentY,
-    wordListWidth,
-    height - sectionPadding - 10 // Increased available height
+    page.puzzle.wordList,
+    contentX + 5,
+    wordListY + 5,
+    contentWidth - 10,
+    wordListHeight - 10
   );
+
+  // 4. Grid
+  const gridY = wordListY + wordListHeight + 10;
+  const availableHeight = PAGE_HEIGHT - gridY - 20; // Bottom margin
+  
   renderGrid(
     pdf,
-    puzzle.grid,
-    gridX,
-    contentY,
-    gridWidth,
-    gridHeight
+    page.puzzle.grid,
+    contentX,
+    gridY,
+    contentWidth,
+    availableHeight,
+    false // Don't show answers
   );
+
+  // 5. Footer
+  const footerY = PAGE_HEIGHT - 10;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(14);
+  pdf.setTextColor(COLOR_ORANGE[0], COLOR_ORANGE[1], COLOR_ORANGE[2]);
+  pdf.text(`${page.pageNumber + 151}`, contentX + 10, footerY); // Example offset
+
+  pdf.setFont("helvetica", "italic");
+  pdf.setFontSize(10);
+  pdf.setTextColor(COLOR_BLACK[0], COLOR_BLACK[1], COLOR_BLACK[2]);
+  pdf.text("Answers on page 192.", contentX + contentWidth - 10, footerY, {
+    align: "right",
+  });
+};
+
+const renderAnswerPage = (pdf: jsPDF, puzzles: WordFillInPage[], pageIndex: number) => {
+  const contentX = PAGE_MARGIN;
+  const contentWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
+  const contentY = 15;
+  const contentHeight = PAGE_HEIGHT - 30;
+
+  // Header
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(24);
+  pdf.setTextColor(COLOR_BLACK[0], COLOR_BLACK[1], COLOR_BLACK[2]);
+  pdf.text("Answer Key", contentX + contentWidth / 2, contentY + 10, { align: "center" });
+
+  // Grid Layout for 4 puzzles (2x2)
+  const startY = contentY + 20;
+  const gap = 10;
+  const itemWidth = (contentWidth - gap) / 2;
+  const itemHeight = (contentHeight - 40) / 2;
+
+  puzzles.forEach((page, index) => {
+    const col = index % 2;
+    const row = Math.floor(index / 2);
+    
+    const itemX = contentX + col * (itemWidth + gap);
+    const itemY = startY + row * (itemHeight + gap);
+
+    // Draw Puzzle Number
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+    pdf.setTextColor(COLOR_ORANGE[0], COLOR_ORANGE[1], COLOR_ORANGE[2]);
+    pdf.text(`${page.pageNumber}`, itemX + itemWidth / 2, itemY + 5, { align: "center" });
+
+    // Draw Solved Grid
+    renderGrid(
+      pdf,
+      page.puzzle.grid,
+      itemX,
+      itemY + 8,
+      itemWidth,
+      itemHeight - 15,
+      true // Show answers
+    );
+  });
+  
+  // Footer
+  const footerY = PAGE_HEIGHT - 10;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(10);
+  pdf.setTextColor(COLOR_BLACK[0], COLOR_BLACK[1], COLOR_BLACK[2]);
+  pdf.text(`Answers - Page ${pageIndex}`, contentX + contentWidth / 2, footerY, { align: "center" });
 };
 
 // Group words by length and sort
 const groupWordsByLength = (words: string[]): Array<{ length: number; words: string[] }> => {
-  // Sort words by length (shortest first)
   const sorted = [...words].sort((a, b) => a.length - b.length);
-
-  // Group by length
   const groups: Array<{ length: number; words: string[] }> = [];
   let currentLength = 0;
   let currentGroup: string[] = [];
@@ -139,17 +205,14 @@ const groupWordsByLength = (words: string[]): Array<{ length: number; words: str
     if (word.length === currentLength) {
       currentGroup.push(word);
     } else {
-      // Save previous group if exists
       if (currentGroup.length > 0) {
         groups.push({ length: currentLength, words: currentGroup });
       }
-      // Start new group
       currentLength = word.length;
       currentGroup = [word];
     }
   }
 
-  // Save last group
   if (currentGroup.length > 0) {
     groups.push({ length: currentLength, words: currentGroup });
   }
@@ -165,109 +228,57 @@ const renderWordList = (
   width: number,
   height: number
 ) => {
-  // Use 3 columns for better space utilization
-  const columns = width > 70 ? 3 : 2; // Use 3 columns if width is sufficient
-  const columnGap = 3; // Reduced spacing
-  const columnWidth = (width - columnGap * (columns - 1)) / columns;
-  const lineHeight = 4.2; // Reduced from 6 to fit more words
-  const groupSpacing = 2.5; // Reduced from 8 to fit more groups
-  const titleHeight = 3.2; // Reduced from 5
-  const titleBottomMargin = 0.8; // Reduced from 2
-
-  // Group words by length
-  const wordGroups = groupWordsByLength(words);
-
-  let currentY = y;
-  const bottomLimit = y + height - 2; // Leave small margin at bottom
-
-  wordGroups.forEach((group) => {
-    // Calculate space needed for this group
-    const groupRows = Math.ceil(group.words.length / columns);
-    const groupHeight = titleHeight + titleBottomMargin + groupRows * lineHeight;
-
-    // Check if we have enough space for this entire group
-    if (currentY + groupHeight > bottomLimit) {
-      // Try to fit at least some words from this group
-      const availableHeight = bottomLimit - currentY - titleHeight - titleBottomMargin;
-      const maxRows = Math.floor(availableHeight / lineHeight);
-      
-      if (maxRows > 0) {
-        // Draw title
-        pdf.setFillColor(200, 220, 255);
-        pdf.setDrawColor(150, 180, 220);
-        pdf.setLineWidth(0.3);
-        pdf.roundedRect(x, currentY - 2.5, width, titleHeight, 1.5, 1.5, "FD");
-
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(7); // Reduced from 8
-        pdf.setTextColor(50, 100, 180);
-        const titleText = `${group.length} ${group.length === 1 ? "letter" : "letters"}`;
-        pdf.text(titleText.toUpperCase(), x + width / 2, currentY, {
-          align: "center",
-        });
-
-        currentY += titleHeight + titleBottomMargin;
-
-        // Draw only words that fit
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(8); // Reduced from 9
-        pdf.setTextColor(0, 0, 0);
-
-        const wordsToShow = Math.min(group.words.length, maxRows * columns);
-        const wordsPerColumn = Math.max(1, Math.ceil(wordsToShow / columns));
-
-        for (let i = 0; i < wordsToShow; i++) {
-          const columnIndex = Math.floor(i / wordsPerColumn);
-          const rowIndex = i % wordsPerColumn;
-          const textX = x + columnIndex * (columnWidth + columnGap);
-          const textY = currentY + rowIndex * lineHeight;
-
-          if (textY <= bottomLimit) {
-            pdf.text(group.words[i], textX, textY);
-          }
-        }
-      }
-      return; // Stop here, no more space
-    }
-
-    // Draw title background
-    pdf.setFillColor(200, 220, 255);
-    pdf.setDrawColor(150, 180, 220);
-    pdf.setLineWidth(0.3);
-    pdf.roundedRect(x, currentY - 2.5, width, titleHeight, 1.5, 1.5, "FD");
-
-    // Draw title text
+  const groups = groupWordsByLength(words);
+  const numGroups = groups.length;
+  const colWidth = width / Math.max(1, numGroups);
+  
+  groups.forEach((group, index) => {
+    const groupX = x + index * colWidth;
+    let currentY = y;
+    
+    // Header
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(7); // Reduced from 8
-    pdf.setTextColor(50, 100, 180);
-    const titleText = `${group.length} ${group.length === 1 ? "letter" : "letters"}`;
-    pdf.text(titleText.toUpperCase(), x + width / 2, currentY, {
-      align: "center",
+    pdf.setFontSize(12);
+    pdf.setTextColor(COLOR_TEXT_ORANGE[0], COLOR_TEXT_ORANGE[1], COLOR_TEXT_ORANGE[2]);
+    pdf.text(`${group.length}`, groupX + colWidth / 2, currentY + 4, { align: "center" });
+    
+    currentY += 8;
+    
+    // Words
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.setTextColor(COLOR_BLACK[0], COLOR_BLACK[1], COLOR_BLACK[2]);
+    
+    const lineHeight = 5;
+    group.words.sort().forEach((word) => {
+      pdf.text(word.toUpperCase(), groupX + colWidth / 2, currentY + 4, { align: "center" });
+      currentY += lineHeight;
     });
-
-    currentY += titleHeight + titleBottomMargin;
-
-    // Draw words in this group
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8); // Reduced from 9
-    pdf.setTextColor(0, 0, 0);
-
-    const wordsPerColumn = Math.max(1, Math.ceil(group.words.length / columns));
-
-    group.words.forEach((word, index) => {
-      const columnIndex = Math.floor(index / wordsPerColumn);
-      const rowIndex = index % wordsPerColumn;
-      const textX = x + columnIndex * (columnWidth + columnGap);
-      const textY = currentY + rowIndex * lineHeight;
-
-      if (textY <= bottomLimit) {
-        pdf.text(word, textX, textY);
-      }
-    });
-
-    // Move to next group position
-    currentY += groupRows * lineHeight + groupSpacing;
   });
+};
+
+// Helper to find the bounding box of the active puzzle area
+const getGridBoundingBox = (grid: WordFillInPage["puzzle"]["grid"]) => {
+  let minRow = grid.length;
+  let maxRow = -1;
+  let minCol = grid[0]?.length || 0;
+  let maxCol = -1;
+
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      if (!grid[r][c].isBlack) {
+        minRow = Math.min(minRow, r);
+        maxRow = Math.max(maxRow, r);
+        minCol = Math.min(minCol, c);
+        maxCol = Math.max(maxCol, c);
+      }
+    }
+  }
+
+  // Handle case where grid is empty or all black (shouldn't happen for valid puzzle)
+  if (maxRow === -1) return { minRow: 0, maxRow: grid.length - 1, minCol: 0, maxCol: (grid[0]?.length || 1) - 1 };
+
+  return { minRow, maxRow, minCol, maxCol };
 };
 
 const renderGrid = (
@@ -276,49 +287,62 @@ const renderGrid = (
   x: number,
   y: number,
   maxWidth: number,
-  maxHeight: number
+  maxHeight: number,
+  showAnswers: boolean = false
 ) => {
-  const rows = grid.length;
-  const cols = grid[0]?.length || rows;
+  // Crop grid to active area
+  const { minRow, maxRow, minCol, maxCol } = getGridBoundingBox(grid);
+  
+  const rows = maxRow - minRow + 1;
+  const cols = maxCol - minCol + 1;
+  
+  // Calculate cell size to fit
   const cellSize = Math.min(maxWidth / cols, maxHeight / rows);
   const gridWidth = cellSize * cols;
   const gridHeight = cellSize * rows;
+  
   const offsetX = x + (maxWidth - gridWidth) / 2;
   const offsetY = y + (maxHeight - gridHeight) / 2;
 
-  pdf.setLineWidth(0.2);
+  pdf.setLineWidth(showAnswers ? 0.4 : 0.7); // Thinner border for small answer grids
+  pdf.setDrawColor(0, 0, 0);
 
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const cell = grid[row][col];
-      const cellX = offsetX + col * cellSize;
-      const cellY = offsetY + row * cellSize;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const gridRow = minRow + r;
+      const gridCol = minCol + c;
+      
+      const cell = grid[gridRow][gridCol];
+      const cellX = offsetX + c * cellSize;
+      const cellY = offsetY + r * cellSize;
 
-      if (cell.isBlack) {
-        pdf.setFillColor(40, 40, 40);
-        pdf.rect(cellX, cellY, cellSize, cellSize, "FD");
-      } else {
+      if (!cell.isBlack) {
+        // Only draw white cells
         pdf.setFillColor(255, 255, 255);
-        pdf.rect(cellX, cellY, cellSize, cellSize, "S");
+        pdf.rect(cellX, cellY, cellSize, cellSize, "FD"); // Fill white, Draw border
+        
+        // Draw letter if revealed or present (depending on config, usually empty for puzzle)
+        // But for now let's keep it empty unless it's a "revealed" puzzle export
+        // If we want to support answer key, we check cell.isRevealed or similar
+        if (showAnswers && cell.letter) {
+           pdf.setFont("helvetica", "bold");
+           pdf.setFontSize(cellSize * 0.9); // Increased font size for answers (HUGE)
+           pdf.setTextColor(0, 0, 0);
+           // Adjust vertical alignment for larger font
+           pdf.text(cell.letter, cellX + cellSize / 2, cellY + cellSize * 0.8, { align: "center" });
+        } else if (cell.isRevealed && cell.letter) {
+           // Also show if explicitly revealed in puzzle mode (though usually not for print)
+           pdf.setFont("helvetica", "bold");
+           pdf.setFontSize(cellSize * 0.6);
+           pdf.setTextColor(0, 0, 0);
+           pdf.text(cell.letter, cellX + cellSize / 2, cellY + cellSize * 0.7, { align: "center" });
+        }
+      } else {
+        // Fill black cells
+        pdf.setFillColor(0, 0, 0);
+        pdf.rect(cellX, cellY, cellSize, cellSize, "F");
       }
     }
   }
 };
 
-const drawPageFooter = (
-  pdf: jsPDF,
-  pageNumber: number,
-  pageWidth: number,
-  pageHeight: number
-) => {
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(10);
-  pdf.setTextColor(100, 100, 100);
-  pdf.text(
-    `Page ${pageNumber}`,
-    pageWidth / 2,
-    pageHeight - 10,
-    { align: "center" }
-  );
-  pdf.setTextColor(0, 0, 0);
-};

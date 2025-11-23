@@ -14,13 +14,17 @@ export class WordFillInGenerator {
 
   static generatePuzzles(config: WordFillInConfig): WordFillInPage[] {
     const { words, pages: totalPages, gridSize } = config;
-    const wordsPerPage = Math.ceil(words.length / totalPages);
+    
+    // Filter out words with length < 2
+    const validWords = words.filter(w => w.length >= 2);
+    
+    const wordsPerPage = Math.ceil(validWords.length / totalPages);
     const resultPages: WordFillInPage[] = [];
 
     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
       const startIndex = (pageNum - 1) * wordsPerPage;
-      const endIndex = Math.min(startIndex + wordsPerPage, words.length);
-      const pageWords = words.slice(startIndex, endIndex);
+      const endIndex = Math.min(startIndex + wordsPerPage, validWords.length);
+      const pageWords = validWords.slice(startIndex, endIndex);
 
       if (pageWords.length > 0) {
         const puzzle = this.generatePuzzle(pageWords, gridSize, pageNum);
@@ -43,10 +47,13 @@ export class WordFillInGenerator {
     const placedWords: WordFillInWord[] = [];
     const usedWords = new Set<string>();
 
-    // Shuffle words to randomize placement order
-    const shuffledWords = [...words].sort(() => Math.random() - 0.5);
+    // Sort words by length (longest first) to make placement easier
+    // And ensure no short words slip through
+    const sortedWords = [...words]
+      .filter(w => w.length >= 2)
+      .sort((a, b) => b.length - a.length);
 
-    for (const word of shuffledWords) {
+    for (const word of sortedWords) {
       if (usedWords.has(word.toLowerCase())) continue;
 
       const placement = this.findBestPlacement(
@@ -61,15 +68,21 @@ export class WordFillInGenerator {
       }
     }
 
-    // Fill remaining empty cells with random distribution of black/white
-    this.fillEmptyCells(grid, gridSize);
+    // Finalize grid: Mark all empty cells as black
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
+        if (grid[r][c].letter === null) {
+          grid[r][c].isBlack = true;
+        }
+      }
+    }
 
     return {
       id: `puzzle-${pageNumber}-${Date.now()}`,
       pageNumber,
       grid,
       words: placedWords,
-      wordList: Array.from(usedWords),
+      wordList: Array.from(usedWords).sort(),
       config: {
         words: Array.from(usedWords),
         pages: 1,
@@ -201,6 +214,41 @@ export class WordFillInGenerator {
     let score = 0;
     let intersections = 0;
 
+    // If this is the first word, any valid position is okay, but prefer center
+    if (placedWords.length === 0) {
+       const center = grid.length / 2;
+       const dist = Math.abs(row - center) + Math.abs(col - center);
+       return 100 - dist; 
+    }
+
+    // Check boundary before word
+    const beforeRow = direction === "horizontal" ? row : row - 1;
+    const beforeCol = direction === "horizontal" ? col - 1 : col;
+    if (
+      beforeRow >= 0 &&
+      beforeRow < grid.length &&
+      beforeCol >= 0 &&
+      beforeCol < grid[0].length &&
+      grid[beforeRow][beforeCol].letter !== null
+    ) {
+      return -1;
+    }
+
+    // Check boundary after word
+    const afterRow = direction === "horizontal" ? row : row + word.length;
+    const afterCol = direction === "horizontal" ? col + word.length : col;
+    if (
+      afterRow >= 0 &&
+      afterRow < grid.length &&
+      afterCol >= 0 &&
+      afterCol < grid[0].length &&
+      grid[afterRow][afterCol].letter !== null
+    ) {
+      return -1;
+    }
+
+
+
     for (let i = 0; i < word.length; i++) {
       const currentRow = direction === "horizontal" ? row : row + i;
       const currentCol = direction === "horizontal" ? col + i : col;
@@ -209,6 +257,22 @@ export class WordFillInGenerator {
 
       if (cell.letter === null) {
         score += 1; // Empty cell
+
+        // Check perpendicular neighbors (Side-Touching Rule)
+        // We only check neighbors if we are placing a NEW letter.
+        // If we are intersecting (cell.letter !== null), touching is expected/allowed.
+        if (direction === "horizontal") {
+            // Check Top
+            if (currentRow > 0 && grid[currentRow - 1][currentCol].letter !== null) return -1;
+            // Check Bottom
+            if (currentRow < grid.length - 1 && grid[currentRow + 1][currentCol].letter !== null) return -1;
+        } else {
+            // Check Left
+            if (currentCol > 0 && grid[currentRow][currentCol - 1].letter !== null) return -1;
+            // Check Right
+            if (currentCol < grid[0].length - 1 && grid[currentRow][currentCol + 1].letter !== null) return -1;
+        }
+
       } else if (cell.letter.toLowerCase() === word[i].toLowerCase()) {
         score += 10; // Intersection with matching letter
         intersections++;
@@ -217,8 +281,13 @@ export class WordFillInGenerator {
       }
     }
 
+    // Require at least one intersection for subsequent words to ensure connectivity
+    if (placedWords.length > 0 && intersections === 0) {
+        return -1; 
+    }
+
     // Bonus for intersections
-    score += intersections * 5;
+    score += intersections * 3;
 
     return score;
   }
@@ -259,209 +328,6 @@ export class WordFillInGenerator {
       direction,
       cells,
     });
-  }
-
-  private static fillEmptyCells(
-    grid: WordFillInCell[][],
-    gridSize: number
-  ): void {
-    // Collect all empty cells
-    const emptyCells: Array<{ row: number; col: number }> = [];
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
-        if (grid[row][col].letter === null) {
-          emptyCells.push({ row, col });
-        }
-      }
-    }
-
-    // Shuffle empty cells to randomize distribution
-    emptyCells.sort(() => Math.random() - 0.5);
-
-    // Calculate how many cells should be black vs white
-    // Aim for roughly 40-60% black cells for good puzzle balance
-    const blackRatio = 0.4 + Math.random() * 0.2; // 40-60%
-    const blackCount = Math.floor(emptyCells.length * blackRatio);
-
-    // Randomly assign black cells
-    for (let i = 0; i < emptyCells.length; i++) {
-      const cell = emptyCells[i];
-      if (i < blackCount) {
-        grid[cell.row][cell.col].isBlack = true;
-      } else {
-        // All white cells must have letters - fill with random letter
-        const randomLetter = String.fromCharCode(
-          65 + Math.floor(Math.random() * 26)
-        ); // A-Z
-        grid[cell.row][cell.col] = {
-          letter: randomLetter,
-          isBlack: false,
-          isRevealed: false,
-        };
-      }
-    }
-
-    // Ensure no isolated white cells (cells surrounded by black cells)
-    this.ensureConnectivity(grid, gridSize);
-  }
-
-  private static ensureConnectivity(
-    grid: WordFillInCell[][],
-    gridSize: number
-  ): void {
-    const visited = Array(gridSize)
-      .fill(null)
-      .map(() => Array(gridSize).fill(false));
-    const whiteCells: { row: number; col: number }[] = [];
-
-    // Find all white cells
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
-        if (!grid[row][col].isBlack && grid[row][col].letter !== null) {
-          whiteCells.push({ row, col });
-        }
-      }
-    }
-
-    if (whiteCells.length === 0) return;
-
-    // DFS to find connected components
-    const components: Array<{ row: number; col: number }[]> = [];
-
-    for (const cell of whiteCells) {
-      if (!visited[cell.row][cell.col]) {
-        const component: { row: number; col: number }[] = [];
-        this.dfs(cell.row, cell.col, grid, visited, component, gridSize);
-        components.push(component);
-      }
-    }
-
-    // If there are multiple components, connect them by removing some black cells
-    if (components.length > 1) {
-      this.connectComponents(components, grid, gridSize);
-    }
-  }
-
-  private static dfs(
-    row: number,
-    col: number,
-    grid: WordFillInCell[][],
-    visited: boolean[][],
-    component: { row: number; col: number }[],
-    gridSize: number
-  ): void {
-    if (
-      row < 0 ||
-      row >= gridSize ||
-      col < 0 ||
-      col >= gridSize ||
-      visited[row][col]
-    ) {
-      return;
-    }
-
-    if (grid[row][col].isBlack || grid[row][col].letter === null) {
-      return;
-    }
-
-    visited[row][col] = true;
-    component.push({ row, col });
-
-    // Check all 4 directions
-    this.dfs(row - 1, col, grid, visited, component, gridSize);
-    this.dfs(row + 1, col, grid, visited, component, gridSize);
-    this.dfs(row, col - 1, grid, visited, component, gridSize);
-    this.dfs(row, col + 1, grid, visited, component, gridSize);
-  }
-
-  private static connectComponents(
-    components: Array<{ row: number; col: number }[]>,
-    grid: WordFillInCell[][],
-    gridSize: number
-  ): void {
-    // Simple approach: find the closest pair of components and connect them
-    for (let i = 0; i < components.length - 1; i++) {
-      const component1 = components[i];
-      const component2 = components[i + 1];
-
-      let minDistance = Infinity;
-      let bestPath: { row: number; col: number }[] = [];
-
-      // Find shortest path between components
-      for (const cell1 of component1) {
-        for (const cell2 of component2) {
-          const path = this.findPath(cell1, cell2, grid, gridSize);
-          if (path && path.length < minDistance) {
-            minDistance = path.length;
-            bestPath = path;
-          }
-        }
-      }
-
-      // Create a minimal path by adding strategic black cells
-      // This ensures connectivity without creating empty white cells
-      for (let i = 1; i < bestPath.length - 1; i++) {
-        const cell = bestPath[i];
-        if (grid[cell.row][cell.col].letter === null) {
-          // Keep as black cell for connectivity
-          grid[cell.row][cell.col].isBlack = true;
-        }
-      }
-    }
-  }
-
-  private static findPath(
-    start: { row: number; col: number },
-    end: { row: number; col: number },
-    grid: WordFillInCell[][],
-    gridSize: number
-  ): { row: number; col: number }[] | null {
-    // Simple BFS to find path
-    const queue: Array<{
-      row: number;
-      col: number;
-      path: { row: number; col: number }[];
-    }> = [{ ...start, path: [start] }];
-    const visited = new Set<string>();
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      const key = `${current.row},${current.col}`;
-
-      if (visited.has(key)) continue;
-      visited.add(key);
-
-      if (current.row === end.row && current.col === end.col) {
-        return current.path;
-      }
-
-      // Check all 4 directions
-      const directions = [
-        { row: current.row - 1, col: current.col },
-        { row: current.row + 1, col: current.col },
-        { row: current.row, col: current.col - 1 },
-        { row: current.row, col: current.col + 1 },
-      ];
-
-      for (const dir of directions) {
-        if (
-          dir.row >= 0 &&
-          dir.row < gridSize &&
-          dir.col >= 0 &&
-          dir.col < gridSize
-        ) {
-          const dirKey = `${dir.row},${dir.col}`;
-          if (!visited.has(dirKey)) {
-            queue.push({
-              ...dir,
-              path: [...current.path, dir],
-            });
-          }
-        }
-      }
-    }
-
-    return null;
   }
 
   static revealAnswers(puzzle: WordFillInPuzzle): WordFillInPuzzle {

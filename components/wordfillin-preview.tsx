@@ -79,6 +79,7 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
     null
   );
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const printRef = useRef<HTMLDivElement | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   // Update current puzzle when puzzles change
@@ -117,163 +118,88 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
   };
 
   const handleExportPDF = async () => {
-    if (!previewRef.current) return;
+    if (!printRef.current) return;
     try {
       setIsExporting(true);
 
       const html2canvas = (await import("html2canvas")).default;
-
       const jsPDFModule = await import("jspdf");
       const jsPDF = jsPDFModule.jsPDF || jsPDFModule.default;
-      console.log("jsPDF loaded:", jsPDF);
 
-      // Create a style element to override all oklch colors
-      const styleOverride = document.createElement("style");
-      styleOverride.textContent = `
-        * {
-          color: rgb(0, 0, 0) !important;
-          background-color: rgb(255, 255, 255) !important;
-        }
-        .bg-black {
-          background-color: rgb(0, 0, 0) !important;
-        }
-        .bg-gray-100 {
-          background-color: rgb(245, 245, 245) !important;
-        }
-        .bg-red-50 { background-color: rgb(254, 242, 242) !important; }
-        .bg-blue-50 { background-color: rgb(239, 246, 255) !important; }
-        .bg-green-50 { background-color: rgb(240, 253, 244) !important; }
-        .bg-yellow-50 { background-color: rgb(254, 252, 232) !important; }
-        .bg-purple-50 { background-color: rgb(250, 245, 255) !important; }
-        .bg-pink-50 { background-color: rgb(253, 242, 248) !important; }
-        .bg-indigo-50 { background-color: rgb(238, 242, 255) !important; }
-        .bg-orange-50 { background-color: rgb(255, 247, 237) !important; }
-        .bg-teal-50 { background-color: rgb(240, 253, 250) !important; }
-        .bg-cyan-50 { background-color: rgb(236, 254, 255) !important; }
-        .bg-lime-50 { background-color: rgb(247, 254, 231) !important; }
-        .bg-rose-50 { background-color: rgb(255, 241, 242) !important; }
-        .text-red-600 { color: rgb(220, 38, 38) !important; }
-        .text-blue-600 { color: rgb(37, 99, 235) !important; }
-        .text-green-600 { color: rgb(22, 163, 74) !important; }
-        .text-yellow-600 { color: rgb(202, 138, 4) !important; }
-        .text-purple-600 { color: rgb(147, 51, 234) !important; }
-        .text-pink-600 { color: rgb(219, 39, 119) !important; }
-        .text-indigo-600 { color: rgb(79, 70, 229) !important; }
-        .text-orange-600 { color: rgb(234, 88, 12) !important; }
-        .text-teal-600 { color: rgb(13, 148, 136) !important; }
-        .text-cyan-600 { color: rgb(8, 145, 178) !important; }
-        .text-lime-600 { color: rgb(101, 163, 13) !important; }
-        .text-rose-600 { color: rgb(225, 29, 72) !important; }
-      `;
-
-      // Add the style to the document head
-      document.head.appendChild(styleOverride);
-
+      // Create PDF
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "in",
-        format: [8.5, 11], // 8.5 x 11 inches
+        format: [8.5, 11],
       });
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 0; // No margin for the image itself, we handle it in layout
 
       // Store original page index
       const originalPageIndex = currentPageIndex;
 
       // Process each puzzle page
       for (let i = 0; i < puzzles.length; i++) {
-        // Wait for DOM to update
+        // Update state to render the correct page in the hidden print view
         handlePageChange(i);
+        
+        // Wait for React to render
         await new Promise((resolve) => setTimeout(resolve, 100));
 
-        const node = previewRef.current;
+        const node = printRef.current;
         if (!node) continue;
 
-        // Create temporary style for PDF export - larger cells only for download
-        const margin = 0.5; // inches
-
-        const pdfStyleOverride = document.createElement("style");
-        pdfStyleOverride.textContent = `
-          .puzzle-cell { 
-            width: 1.5in !important; 
-            height: 1.5in !important; 
-            font-size: 0.2in !important;
-            font-weight: bold !important;
-          }
-        `;
-        document.head.appendChild(pdfStyleOverride);
-
-        // Wait for style to apply
-        await new Promise((resolve) => setTimeout(resolve, 50));
-
+        // Make the print view visible temporarily for capture (but off-screen or absolute positioned)
+        // Actually, we can just capture it even if it's hidden from user view as long as it's in DOM and has dimensions
+        // But html2canvas works best if element is visible. 
+        // We will rely on the fact that it is rendered in a hidden container that has display:block but maybe z-index -1 or similar.
+        
         const canvas = await html2canvas(node, {
-          backgroundColor: "#ffffff",
-          scale: 2, // Higher resolution for better quality
+          scale: 2, // High res
           useCORS: true,
           logging: false,
+          backgroundColor: "#ffffff",
+          windowWidth: 816, // 8.5in * 96dpi
         });
 
         const imgData = canvas.toDataURL("image/png");
 
-        // Remove temporary style immediately after capture
-        document.head.removeChild(pdfStyleOverride);
-
-        // Use full page with minimal margins
-        const imgWidth = pageWidth - margin * 2;
-        const imgHeight = pageHeight - margin * 2;
-
-        // Add new page if not the first page
         if (i > 0) {
           pdf.addPage();
         }
 
-        // Calculate position to center content, fill entire printable area
-        const canvasRatio = canvas.width / canvas.height;
-        const targetRatio = imgWidth / imgHeight;
-        let finalWidth = imgWidth;
-        let finalHeight = imgHeight;
-        if (canvasRatio > targetRatio) {
-          // limit by width
-          finalHeight = imgWidth / canvasRatio;
-        } else {
-          // limit by height
-          finalWidth = imgHeight * canvasRatio;
-        }
-        const x = margin + (imgWidth - finalWidth) / 2;
-        const y = margin + (imgHeight - finalHeight) / 2;
+        // Calculate dimensions to fit page
+        const imgWidth = pageWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-        pdf.addImage(
-          imgData,
-          "PNG",
-          x,
-          y,
-          finalWidth,
-          finalHeight,
-          undefined,
-          "FAST"
-        );
+        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
       }
 
       // Restore original page
       handlePageChange(originalPageIndex);
 
-      // Remove the style override
-      document.head.removeChild(styleOverride);
-
-      console.log("Saving PDF...");
       pdf.save(
         `word-fill-in-puzzle-${new Date().toISOString().split("T")[0]}.pdf`
       );
-      console.log("PDF saved successfully with all pages");
     } catch (error: any) {
       console.error("Error exporting PDF:", error);
-      alert(
-        `Export PDF thất bại: ${error.message || error}. Vui lòng thử lại.`
-      );
+      alert(`Export PDF thất bại: ${error.message || error}`);
     } finally {
       setIsExporting(false);
     }
+  };
+
+  // Helper to group words by length
+  const getGroupedWords = (words: string[]) => {
+    const groups: { [key: number]: string[] } = {};
+    words.forEach((word) => {
+      const len = word.length;
+      if (!groups[len]) groups[len] = [];
+      groups[len].push(word);
+    });
+    return groups;
   };
 
   if (puzzles.length === 0) {
@@ -355,16 +281,15 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
         </Button>
       </div>
 
-      {/* Content */}
+      {/* Content - Interactive View */}
       <div className="flex-1 overflow-auto p-4">
         {currentPuzzle && (
           <div className="space-y-6">
             {/* Puzzle Grid */}
             <Card>
               <CardContent>
-                <div className="flex justify-center">
+                <div className="flex justify-center pt-6">
                   <div
-                    ref={previewRef}
                     className="grid gap-0 border-2 border-gray-800"
                     style={{
                       gridTemplateColumns: `repeat(${currentPuzzle.grid.length}, 1fr)`,
@@ -376,7 +301,7 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
                         <div
                           key={`${rowIndex}-${colIndex}`}
                           className={`
-                            puzzle-cell w-8 h-8 border border-gray-300 flex items-center justify-center text-sm font-bold
+                            w-8 h-8 border border-gray-300 flex items-center justify-center text-sm font-bold
                             ${
                               cell.isBlack
                                 ? "bg-black"
@@ -429,45 +354,176 @@ export function WordFillInPreview({ puzzles }: WordFillInPreviewProps) {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Puzzle Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Thông tin puzzle</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Kích thước lưới:</span>
-                  <Badge variant="outline">
-                    {currentPuzzle.grid.length} x {currentPuzzle.grid[0].length}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Số từ:</span>
-                  <Badge variant="outline">{currentPuzzle.words.length}</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Ô đen:</span>
-                  <Badge variant="outline">
-                    {
-                      currentPuzzle.grid.flat().filter((cell) => cell.isBlack)
-                        .length
-                    }
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Ô trắng:</span>
-                  <Badge variant="outline">
-                    {
-                      currentPuzzle.grid.flat().filter((cell) => !cell.isBlack)
-                        .length
-                    }
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
+      </div>
+
+      {/* Hidden Print Layout - Only for PDF Generation */}
+      <div className="fixed left-0 top-0 -z-50 overflow-hidden w-0 h-0">
+        <div
+          ref={printRef}
+          style={{
+            width: "816px", // 8.5 inches at 96 DPI
+            minHeight: "1056px", // 11 inches at 96 DPI
+            backgroundColor: "white",
+            display: "flex",
+            flexDirection: "column",
+            fontFamily: "Arial, sans-serif",
+            position: "relative",
+          }}
+        >
+          {currentPuzzle && (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              {/* Header */}
+              <div
+                style={{
+                  backgroundColor: "#F38036", // Orange from image
+                  height: "80px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: "48px",
+                  fontWeight: "bold",
+                  width: "100%",
+                }}
+              >
+                {currentPuzzle.pageNumber}
+              </div>
+
+              {/* Word List Section */}
+              <div
+                style={{
+                  backgroundColor: "#FDE9D9", // Light Orange from image
+                  padding: "20px 40px",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "40px",
+                  justifyContent: "center",
+                  minHeight: "150px",
+                }}
+              >
+                {Object.entries(getGroupedWords(currentPuzzle.wordList))
+                  .sort(([a], [b]) => Number(a) - Number(b))
+                  .map(([length, words]) => (
+                    <div key={length} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <div
+                        style={{
+                          color: "#D35400",
+                          fontWeight: "bold",
+                          fontSize: "18px",
+                          marginBottom: "5px",
+                          textAlign: "center",
+                        }}
+                      >
+                        {length}
+                      </div>
+                      {words.sort().map((word) => (
+                        <div
+                          key={word}
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: "600",
+                            color: "#222",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          {word}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+              </div>
+
+              {/* Grid Section */}
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "flex-start", // Align to top of remaining space
+                  paddingTop: "60px",
+                  paddingBottom: "40px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${currentPuzzle.grid.length}, 1fr)`,
+                    gap: "0",
+                    // No outer border for the grid container to allow irregular shape
+                    width: "fit-content",
+                  }}
+                >
+                  {currentPuzzle.grid.map((row, rowIndex) =>
+                    row.map((cell, colIndex) => (
+                      <div
+                        key={`print-${rowIndex}-${colIndex}`}
+                        style={{
+                          width: "40px", // Slightly larger for print
+                          height: "40px",
+                          // Only show border if it's NOT a black cell
+                          border: !cell.isBlack ? "2px solid black" : "none",
+                          // Remove internal borders where cells touch to create cleaner look? 
+                          // Actually standard crossword has borders on all sides of a cell.
+                          // But we need to handle the "shared" borders to avoid double thickness.
+                          // CSS Grid gap=0 handles this usually, but we need to be careful.
+                          // Let's use outline or specific border sides if needed. 
+                          // Simple border: 1px solid black.
+                          // To match image "thick" look: 2px.
+                          // To avoid double borders: margin -1px? Or just let them overlap.
+                          // Grid gap -2px?
+                          // Let's try standard border and see.
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "24px",
+                          fontWeight: "bold",
+                          backgroundColor: "transparent", // Always transparent background
+                          position: "relative",
+                        }}
+                      >
+                         {!cell.isBlack ? (
+                            <div style={{
+                                width: "100%",
+                                height: "100%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                textTransform: "uppercase",
+                                fontFamily: "Arial, sans-serif",
+                            }}>
+                                {cell.isRevealed || cell.letter ? (cell.letter || "") : ""}
+                            </div>
+                         ) : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "20px 40px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  color: "#F38036",
+                  fontWeight: "bold",
+                  fontSize: "18px",
+                  marginBottom: "20px",
+                }}
+              >
+                <div>{currentPuzzle.pageNumber + 151}</div> {/* Example offset to match 152 */}
+                <div style={{ color: "black", fontStyle: "italic", fontSize: "14px", fontWeight: "normal" }}>
+                  Answers on page 192.
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

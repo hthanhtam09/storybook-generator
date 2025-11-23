@@ -49,179 +49,97 @@ export const detectTargetLanguageFromTitle = (
   return null;
 };
 
-// Curated high-level theme detection across multiple languages
-export const detectHighLevelTheme = (
-  titles: string[],
-  bookTitle: string,
-  subtitle?: string
-): { primary?: string; related?: string[] } => {
-  const haystack = `${bookTitle} ${subtitle || ""} ${titles.join(
-    " "
-  )}`.toLowerCase();
-  const candidates: Array<{
-    name: string;
-    keywords: string[];
-    related?: string[];
-  }> = [
-    {
-      name: "Christmas",
-      keywords: [
-        "christmas",
-        "navidad",
-        "noël",
-        "xmas",
-        "natale",
-        "weihnacht",
-        "navideño",
-        "festive",
-        "holiday",
-      ],
-      related: ["festive", "holiday", "winter"],
-    },
-    {
-      name: "Halloween",
-      keywords: ["halloween", "día de brujas", "hallowe'en"],
-      related: ["spooky", "autumn"],
-    },
-    {
-      name: "Easter",
-      keywords: ["easter", "pascua", "paques", "ostern"],
-      related: ["spring", "holiday"],
-    },
-    {
-      name: "Winter",
-      keywords: ["winter", "invierno", "hiver", "inverno", "winterzeit"],
-      related: ["snow", "holiday"],
-    },
-    {
-      name: "Summer",
-      keywords: ["summer", "verano", "été", "estate", "sommer"],
-      related: ["vacation", "travel"],
-    },
-    {
-      name: "School",
-      keywords: ["school", "escuela", "école", "schul"],
-      related: ["classroom", "learning"],
-    },
-  ];
+// Extract theme from subtitle using regex patterns
+export const extractThemeFromSubtitle = (subtitle?: string): string | null => {
+  if (!subtitle) return null;
+  const s = subtitle.trim();
 
-  for (const c of candidates) {
-    if (c.keywords.some((k) => haystack.includes(k))) {
-      return { primary: c.name, related: c.related || [] };
+  // Patterns to catch "X Stories", "Stories about X", "X Themed Stories"
+  // Example: "Start Spanish with 30 New Year Stories..." -> "New Year"
+  // Example: "Halloween Stories for Kids" -> "Halloween"
+  
+  // 1. "... X Stories" (ignoring "Short" or number)
+  // We look for the word(s) immediately preceding "Stories"
+  // Exclude common non-theme adjectives like "Short", "Great", "New", "Best" if they are the ONLY word.
+  // But "New Year" is fine.
+  
+  const storiesRegex = /(?:with|contains|of|about|\d+)\s+([a-zA-Z0-9\s'-]+?)\s+Stories/i;
+  const match = s.match(storiesRegex);
+  
+  if (match && match[1]) {
+    const candidate = match[1].trim();
+    const ignored = ["short", "great", "best", "funny", "interesting", "simple", "easy"];
+    if (!ignored.includes(candidate.toLowerCase())) {
+      return candidate;
     }
   }
-  return {};
+
+  // 2. "X Themed"
+  const themedRegex = /([a-zA-Z0-9\s'-]+?)\s+Themed/i;
+  const matchThemed = s.match(themedRegex);
+  if (matchThemed && matchThemed[1]) {
+    return matchThemed[1].trim();
+  }
+
+  return null;
 };
 
-// Extract lightweight themes from story titles (prioritize high-level themes)
+// Extract themes from story titles (prioritize subtitle theme)
 export const extractThemesFromStories = (
   stories: Story[],
   bookTitle?: string,
   subtitle?: string
 ) => {
   const titles = stories.map((s) => s.titleOriginal);
-  const tokens: string[] = [];
-  const stopwords = new Set([
-    "the",
-    "a",
-    "an",
-    "and",
-    "of",
-    "in",
-    "on",
-    "at",
-    "to",
-    "for",
-    "with",
-    "by",
-    "from",
-    "about",
-    "into",
-    "over",
-    "under",
-    "after",
-    "before",
-    "is",
-    "are",
-    "be",
-    "being",
-    "been",
-    "this",
-    "that",
-    "these",
-    "those",
-    "my",
-    "your",
-    "his",
-    "her",
-    "their",
-    "our",
-    // common romance articles/preps
-    "el",
-    "la",
-    "los",
-    "las",
-    "un",
-    "una",
-    "unos",
-    "unas",
-    "de",
-    "del",
-    "al",
-    "y",
-    "en",
-    "con",
-    "por",
-    "para",
-  ]);
+  
+  // 1. Try to get theme from subtitle first
+  let primaryTheme = extractThemeFromSubtitle(subtitle);
 
-  const noisySpecifics = new Set([
-    // de-prioritize overly specific nouns that shouldn't become the main theme
-    "árbol",
-    "arbol",
-    "estrella",
-    "cantora",
-    "duende",
-    "tree",
-    "star",
-    "singer",
-    "imp",
-  ]);
+  // 2. If no subtitle theme, try frequency analysis of titles
+  if (!primaryTheme) {
+    const tokens: string[] = [];
+    const stopwords = new Set([
+      "the", "a", "an", "and", "of", "in", "on", "at", "to", "for", "with", "by", "from", "about",
+      "el", "la", "los", "las", "un", "una", "de", "del", "al", "y", "en", "con", "por", "para",
+      "story", "stories", "short", "chapter", "part"
+    ]);
 
-  titles.forEach((t) => {
-    t.replace(/[^\p{L}\p{N}\s-]/gu, " ")
-      .split(/\s+/)
-      .map((w) => w.trim())
-      .filter(Boolean)
-      .forEach((w) => {
-        const lw = w.toLowerCase();
-        if (lw.length < 3) return;
-        if (stopwords.has(lw)) return;
-        if (noisySpecifics.has(lw)) return;
-        tokens.push(lw);
-      });
-  });
+    titles.forEach((t) => {
+      t.replace(/[^\p{L}\p{N}\s-]/gu, " ")
+        .split(/\s+/)
+        .map((w) => w.trim())
+        .filter(Boolean)
+        .forEach((w) => {
+          const lw = w.toLowerCase();
+          if (lw.length < 3) return;
+          if (stopwords.has(lw)) return;
+          tokens.push(lw); // Keep original case for display? No, let's use lowercase for counting
+        });
+    });
 
-  const freq = new Map<string, number>();
-  tokens.forEach((t) => freq.set(t, (freq.get(t) || 0) + 1));
-  const top = Array.from(freq.entries())
-    .filter(([, count]) => count > 1) // reduce singletons
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([w]) => w);
+    const freq = new Map<string, number>();
+    tokens.forEach((t) => freq.set(t, (freq.get(t) || 0) + 1));
+    const top = Array.from(freq.entries())
+      .filter(([, count]) => count > 1)
+      .sort((a, b) => b[1] - a[1])
+      .map(([w]) => w);
+      
+    // Capitalize the top token to make it look like a theme
+    if (top.length > 0) {
+      primaryTheme = top[0].charAt(0).toUpperCase() + top[0].slice(1);
+    }
+  }
 
-  const { primary: curatedPrimary, related: curatedRelated } =
-    detectHighLevelTheme(titles, bookTitle || "", subtitle);
+  // Fallback
+  if (!primaryTheme) {
+    primaryTheme = "General";
+  }
 
-  const primaryTheme = curatedPrimary || top[0] || titles[0] || "stories";
-  const relatedThemes =
-    curatedRelated && curatedRelated.length
-      ? curatedRelated
-      : top.filter((t) => t !== primaryTheme);
-  const themeList = [primaryTheme, ...relatedThemes].slice(0, 5);
-  const themeSummary = themeList.join(", ");
+  // Generate related themes (just use some keywords from titles or generic ones)
+  // For now, we can leave it simple or derive from other top tokens
+  const themeSummary = primaryTheme; 
 
-  // Sample a few titles only (avoid listing all)
+  // Sample a few titles
   const examples = titles.slice(0, 3);
 
   return { titles, themeSummary, primaryTheme, examples };
