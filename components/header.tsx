@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Search, Puzzle } from "lucide-react";
+import { BookOpen, Search, Puzzle, Gamepad2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,16 @@ export function Header() {
             <Link href="/wordfillin" className="flex items-center gap-2">
               <Puzzle className="h-4 w-4" />
               Word Fill-in Puzzle
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant={pathname === "/gamebook" ? "default" : "ghost"}
+            size="sm"
+          >
+            <Link href="/gamebook" className="flex items-center gap-2">
+              <Gamepad2 className="h-4 w-4" />
+              Game Book
             </Link>
           </Button>
         </nav>

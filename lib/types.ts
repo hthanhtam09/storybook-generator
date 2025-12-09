@@ -146,3 +146,138 @@ export interface WordFillInPage {
   pageNumber: number;
   puzzle: WordFillInPuzzle;
 }
+
+// Game Book Types
+export interface WordSearchGame {
+  words: string[];
+  gridSize: number;
+  title?: string;
+}
+
+export interface CrosswordGame {
+  clues: Array<{
+    number: number;
+    clue: string;
+    answer: string;
+    direction: "across" | "down";
+    row: number;
+    col: number;
+  }>;
+  gridSize: number;
+  title?: string;
+}
+
+export interface LogicPuzzle {
+  title: string;
+  description: string;
+  clues: string[];
+  solution?: string;
+}
+
+export interface SpotTheDifference {
+  title: string;
+  image1?: string; // base64
+  image2?: string; // base64
+  differences: Array<{
+    x: number;
+    y: number;
+    description: string;
+  }>;
+}
+
+export interface SudokuGame {
+  grid: number[][]; // 9x9 grid, 0 for empty
+  solution: number[][];
+  difficulty: "easy" | "medium" | "hard";
+}
+
+export interface AlphabetTrivia {
+  questions: Array<{
+    letter: string;
+    question: string;
+    answer: string;
+  }>;
+}
+
+export interface MatchingGame {
+  title: string;
+  pairs: Array<{
+    left: string;
+    right: string;
+  }>;
+}
+
+export interface WordScramble {
+  scrambled: string;
+  answer: string;
+  hint?: string;
+}
+
+export interface Maze {
+  title: string;
+  grid: number[][]; // 0 = path, 1 = wall
+  start: { row: number; col: number };
+  end: { row: number; col: number };
+}
+
+export interface Cryptogram {
+  encrypted: string;
+  decrypted: string;
+  hint?: string;
+}
+
+export interface NameThatCity {
+  clues: string[];
+  answer: string;
+  image?: string; // base64
+}
+
+export interface FallenPhrase {
+  title: string;
+  phrase: string;
+  grid: string[][]; // 2D grid with letters
+  wordList: string[];
+}
+
+export interface GameBookConfig {
+  // Word Searches
+  wordSearches: WordSearchGame[];
+  
+  // Crosswords
+  crosswords: CrosswordGame[];
+  
+  // Logic Puzzles
+  logicPuzzles: LogicPuzzle[];
+  
+  // Spot the Difference
+  spotTheDifferences: SpotTheDifference[];
+  
+  // Sudoku
+  sudokus: SudokuGame[];
+  
+  // Alphabet Trivia
+  alphabetTrivias: AlphabetTrivia[];
+  
+  // Matching Games
+  matchingGames: MatchingGame[];
+  
+  // Word Scrambles
+  wordScrambles: WordScramble[];
+  
+  // Mazes
+  mazes: Maze[];
+  
+  // Cryptograms
+  cryptograms: Cryptogram[];
+  
+  // Name That City
+  nameThatCities: NameThatCity[];
+  
+  // Fallen Phrases
+  fallenPhrases: FallenPhrase[];
+  
+  // Book metadata
+  title?: string;
+  coverImage?: string; // base64
+  accentColor?: string; // hex color
+}
