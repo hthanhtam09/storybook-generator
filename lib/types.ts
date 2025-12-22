@@ -242,42 +242,89 @@ export interface FallenPhrase {
 export interface GameBookConfig {
   // Word Searches
   wordSearches: WordSearchGame[];
-  
+
   // Crosswords
   crosswords: CrosswordGame[];
-  
+
   // Logic Puzzles
   logicPuzzles: LogicPuzzle[];
-  
+
   // Spot the Difference
   spotTheDifferences: SpotTheDifference[];
-  
+
   // Sudoku
   sudokus: SudokuGame[];
-  
+
   // Alphabet Trivia
   alphabetTrivias: AlphabetTrivia[];
-  
+
   // Matching Games
   matchingGames: MatchingGame[];
-  
+
   // Word Scrambles
   wordScrambles: WordScramble[];
-  
+
   // Mazes
   mazes: Maze[];
-  
+
   // Cryptograms
   cryptograms: Cryptogram[];
-  
+
   // Name That City
   nameThatCities: NameThatCity[];
-  
+
   // Fallen Phrases
   fallenPhrases: FallenPhrase[];
-  
+
   // Book metadata
   title?: string;
   coverImage?: string; // base64
   accentColor?: string; // hex color
+}
+
+// Conversations Types
+export interface ConversationVocabulary {
+  word: string;
+  ipa: string;
+  pronunciation: string;
+  translation: string;
+}
+
+export interface ConversationEntry {
+  speaker: string;
+  text: string;
+}
+
+export interface ConversationQuestion {
+  number: number;
+  questionOriginal: string;
+  questionTranslated: string;
+  options: Array<{
+    letter: string;
+    textOriginal: string;
+    textTranslated: string;
+  }>;
+}
+
+export interface ConversationLesson {
+  id: string;
+  title: string;
+  titleTranslated?: string;
+  introduction: string;
+  imagePrompt: string;
+  vocabulary: ConversationVocabulary[];
+  conversation: ConversationEntry[];
+  conversationTranslated?: ConversationEntry[];
+  questions: ConversationQuestion[];
+  answers: string[];
+  topic?: string;
+}
+
+export interface ConversationsConfig {
+  lessons: ConversationLesson[];
+  title?: string;
+  author?: string;
+  publisher?: string;
+  accentColor?: string;
+  conversationsPerTopic?: number;
 }

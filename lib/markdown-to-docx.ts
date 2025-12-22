@@ -30,7 +30,8 @@ interface MarkdownToDocxOptions {
 }
 
 /**
- * Converts markdown text to DOCX paragraphs with proper formatting
+ * Converts markdown/tagged text to DOCX paragraphs with proper formatting
+ * Handles [P], [LIST_NUM], [LIST_BULLET], [ITEM] tags and traditional markdown
  */
 export function convertMarkdownToDocx(
   markdownText: string,
@@ -44,92 +45,338 @@ export function convertMarkdownToDocx(
   } = options;
 
   const paragraphs: Paragraph[] = [];
-  const lines = markdownText.split("\n");
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  // Check if text contains tags - use new parser
+  if (
+    markdownText.includes("[P]") ||
+    markdownText.includes("[LIST_NUM]") ||
+    markdownText.includes("[LIST_BULLET]")
+  ) {
+    return convertTaggedToDocx(markdownText, options);
+  }
 
-    // Skip empty lines
-    if (!line) {
-      continue;
-    }
+  // Otherwise use traditional markdown parser
 
-    // Handle section headers (lines that start with ** and end with **)
-    if (line.startsWith("**") && line.endsWith("**") && line.length > 4) {
-      const headerText = line.slice(2, -2);
-      paragraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: headerText,
-              size: defaultHeading2Size,
-              font: defaultFontFamily,
-              bold: true,
-            }),
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: {
-            before: SPACING.LARGE,
-            after: SPACING.DEFAULT,
-          },
-          heading: HeadingLevel.HEADING_2,
-        })
-      );
-      continue;
-    }
+  // First split by double line breaks to separate paragraphs/blocks
+  const blocks = markdownText.split(/\n\n+/).filter((block) => block.trim());
 
-    // Handle bullet points (lines that start with · or -)
-    if (line.startsWith("·") || line.startsWith("-")) {
-      const bulletText = line.slice(1).trim();
-      const bulletTextRuns = parseBulletPointFormatting(
-        bulletText,
+  blocks.forEach((block, blockIndex) => {
+    // Then split each block by single line breaks
+    const lines = block.split("\n").filter((line) => line.trim());
+
+    lines.forEach((line, lineIndex) => {
+      const trimmedLine = line.trim();
+
+      // Skip empty lines
+      if (!trimmedLine) {
+        return;
+      }
+
+      // Handle section headers (lines that start with ** and end with **)
+      if (
+        trimmedLine.startsWith("**") &&
+        trimmedLine.endsWith("**") &&
+        trimmedLine.length > 4
+      ) {
+        const headerText = trimmedLine.slice(2, -2);
+        paragraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: headerText,
+                size: defaultHeading2Size,
+                font: defaultFontFamily,
+                bold: true,
+              }),
+            ],
+            alignment: AlignmentType.LEFT,
+            spacing: {
+              before: SPACING.LARGE,
+              after: SPACING.DEFAULT,
+            },
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        return;
+      }
+
+      // Handle numbered lists (1., 2., 3., etc.)
+      const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.+)/);
+      if (numberedMatch) {
+        const numberText = numberedMatch[1] + ". ";
+        const contentText = numberedMatch[2];
+        const contentRuns = parseInlineFormatting(
+          contentText,
+          defaultBodySizeHalfPoints,
+          defaultFontFamily
+        );
+
+        paragraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: numberText,
+                size: defaultBodySizeHalfPoints,
+                font: defaultFontFamily,
+                bold: true,
+              }),
+              ...contentRuns,
+            ],
+            alignment: AlignmentType.LEFT,
+            spacing: {
+              before: lineIndex === 0 ? SPACING.DEFAULT : 0,
+              after: SPACING.DEFAULT,
+            },
+            indent: { left: 360 }, // 0.25 inch indent
+          })
+        );
+        return;
+      }
+
+      // Handle bullet points (lines that start with ·, -, or *)
+      if (
+        trimmedLine.startsWith("·") ||
+        trimmedLine.startsWith("-") ||
+        trimmedLine.startsWith("•") ||
+        trimmedLine.startsWith("*")
+      ) {
+        const bulletText = trimmedLine.slice(1).trim();
+        const bulletTextRuns = parseBulletPointFormatting(
+          bulletText,
+          defaultBodySizeHalfPoints,
+          defaultFontFamily
+        );
+        paragraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "• ",
+                size: defaultBodySizeHalfPoints,
+                font: defaultFontFamily,
+                bold: true,
+              }),
+              ...bulletTextRuns,
+            ],
+            alignment: AlignmentType.LEFT,
+            spacing: {
+              before: lineIndex === 0 ? SPACING.DEFAULT : 0,
+              after: SPACING.DEFAULT,
+            },
+            indent: { left: 360 }, // 0.25 inch indent
+          })
+        );
+        return;
+      }
+
+      // Handle regular paragraphs with inline formatting
+      const textRuns = parseInlineFormatting(
+        trimmedLine,
         defaultBodySizeHalfPoints,
         defaultFontFamily
       );
+
+      if (textRuns.length > 0) {
+        paragraphs.push(
+          new Paragraph({
+            children: textRuns,
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: {
+              after: SPACING.LARGE,
+              line: LINE_HEIGHT.ONE_HALF,
+              lineRule: LineRuleType.AUTO,
+            },
+          })
+        );
+      }
+    });
+
+    // Add extra space after each block (except the last one)
+    if (blockIndex < blocks.length - 1 && lines.length > 1) {
       paragraphs.push(
         new Paragraph({
-          children: [
-            new TextRun({
-              text: "• ",
-              size: defaultBodySizeHalfPoints,
-              font: defaultFontFamily,
-              bold: true,
-            }),
-            ...bulletTextRuns,
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: {
-            after: Math.max(
-              SPACING.SMALL,
-              Math.round(defaultParagraphAfterTwips * 0.5)
-            ),
-          },
-          indent: { left: 360 }, // 0.25 inch indent
-        })
-      );
-      continue;
-    }
-
-    // Handle regular paragraphs with inline formatting
-    const textRuns = parseInlineFormatting(
-      line,
-      defaultBodySizeHalfPoints,
-      defaultFontFamily
-    );
-
-    if (textRuns.length > 0) {
-      paragraphs.push(
-        new Paragraph({
-          children: textRuns,
-          alignment: AlignmentType.JUSTIFIED,
-          spacing: {
-            after: defaultParagraphAfterTwips,
-            line: LINE_HEIGHT.ONE_HALF,
-            lineRule: LineRuleType.AUTO,
-          },
+          text: "",
+          spacing: { after: SPACING.SMALL },
         })
       );
     }
+  });
+
+  return paragraphs;
+}
+
+/**
+ * Converts tagged text to DOCX paragraphs in sequential order
+ * Handles [P], [LIST_NUM], [LIST_BULLET], and [ITEM] tags
+ */
+function convertTaggedToDocx(
+  text: string,
+  options: MarkdownToDocxOptions
+): Paragraph[] {
+  const {
+    defaultBodySizeHalfPoints,
+    defaultFontFamily,
+    defaultParagraphAfterTwips,
+  } = options;
+
+  const paragraphs: Paragraph[] = [];
+  text = text.trim();
+
+  // Parse tags in sequential order as they appear
+  const tagRegex =
+    /\[P\]([\s\S]*?)\[\/P\]|\[LIST_NUM\]([\s\S]*?)\[\/LIST_NUM\]|\[LIST_BULLET\]([\s\S]*?)\[\/LIST_BULLET\]/g;
+  let match;
+  let hasMatches = false;
+
+  while ((match = tagRegex.exec(text)) !== null) {
+    hasMatches = true;
+    if (match[1]) {
+      // This is a [P] paragraph
+      const content = match[1].trim();
+      if (content) {
+        paragraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: content,
+                size: defaultBodySizeHalfPoints,
+                font: defaultFontFamily,
+              }),
+            ],
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: {
+              after: SPACING.LARGE,
+              line: LINE_HEIGHT.ONE_HALF,
+              lineRule: LineRuleType.AUTO,
+            },
+          })
+        );
+      }
+    } else if (match[2]) {
+      // This is a [LIST_NUM]
+      const listContent = match[2].trim();
+      const items = listContent.match(/\[ITEM\]([\s\S]*?)\[\/ITEM\]/g);
+
+      if (items) {
+        items.forEach((item, index) => {
+          const itemContent = item.replace(/\[ITEM\]|\[\/ITEM\]/g, "").trim();
+          if (itemContent) {
+            paragraphs.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `${index + 1}. `,
+                    size: defaultBodySizeHalfPoints,
+                    font: defaultFontFamily,
+                    bold: true,
+                  }),
+                  new TextRun({
+                    text: itemContent,
+                    size: defaultBodySizeHalfPoints,
+                    font: defaultFontFamily,
+                  }),
+                ],
+                alignment: AlignmentType.LEFT,
+                indent: { left: 360 },
+                spacing: {
+                  before: index === 0 ? SPACING.DEFAULT : 0,
+                  after: SPACING.DEFAULT,
+                },
+              })
+            );
+          }
+        });
+
+        // Add space after list
+        paragraphs.push(
+          new Paragraph({
+            text: "",
+            spacing: { after: SPACING.SMALL },
+          })
+        );
+      }
+    } else if (match[3]) {
+      // This is a [LIST_BULLET]
+      const listContent = match[3].trim();
+      const items = listContent.match(/\[ITEM\]([\s\S]*?)\[\/ITEM\]/g);
+
+      if (items) {
+        items.forEach((item, index) => {
+          const itemContent = item.replace(/\[ITEM\]|\[\/ITEM\]/g, "").trim();
+          if (itemContent) {
+            paragraphs.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: "• ",
+                    size: defaultBodySizeHalfPoints,
+                    font: defaultFontFamily,
+                    bold: true,
+                  }),
+                  new TextRun({
+                    text: itemContent,
+                    size: defaultBodySizeHalfPoints,
+                    font: defaultFontFamily,
+                  }),
+                ],
+                alignment: AlignmentType.LEFT,
+                indent: { left: 360 },
+                spacing: {
+                  before: index === 0 ? SPACING.DEFAULT : 0,
+                  after: SPACING.DEFAULT,
+                },
+              })
+            );
+          }
+        });
+
+        // Add space after list
+        paragraphs.push(
+          new Paragraph({
+            text: "",
+            spacing: { after: SPACING.SMALL },
+          })
+        );
+      }
+    }
+  }
+
+  // If no matches found but contains tags, strip tags and parse as plain text
+  if (!hasMatches && (text.includes("[") || text.includes("]"))) {
+    const cleanText = text
+      .replace(/\[P\]|\[\/P\]/g, "\n\n")
+      .replace(/\[LIST_NUM\]|\[\/LIST_NUM\]/g, "\n")
+      .replace(/\[LIST_BULLET\]|\[\/LIST_BULLET\]/g, "\n")
+      .replace(/\[ITEM\]/g, "")
+      .replace(/\[\/ITEM\]/g, "\n")
+      .trim();
+
+    // Split by double line breaks and create paragraphs
+    const blocks = cleanText.split(/\n\n+/).filter((block) => block.trim());
+    blocks.forEach((block) => {
+      const lines = block.split(/\n/).filter((line) => line.trim());
+      lines.forEach((line) => {
+        const trimmedLine = line.trim();
+        if (trimmedLine) {
+          paragraphs.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: trimmedLine,
+                  size: defaultBodySizeHalfPoints,
+                  font: defaultFontFamily,
+                }),
+              ],
+              alignment: AlignmentType.JUSTIFIED,
+              spacing: {
+                after: SPACING.DEFAULT,
+                line: LINE_HEIGHT.ONE_HALF,
+                lineRule: LineRuleType.AUTO,
+              },
+            })
+          );
+        }
+      });
+    });
   }
 
   return paragraphs;

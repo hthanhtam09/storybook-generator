@@ -1,0 +1,185 @@
+=== CUSTOM SETTINGS (CHANGE ONLY THIS SECTION) ===
+
+TARGET_LANGUAGE: Spanish
+TRANSLATION_LANGUAGE: English
+LEVEL: A2
+NUMBER_OF_CONVERSATIONS: 20
+CONVERSATIONS_PER_TOPIC: 10
+TOPICS: 
+  Topic 1: Daily Life & Greetings
+  Topic 2: Food & Social Situations
+Note: Do NOT include conversation numbers in the topic text. Just the topic name.
+DIFFICULTY_NOTES: Very basic grammar, present tense, simple sentences, common vocabulary
+
+IMAGE_PROMPT_TEMPLATE: [A funny chaotic moment where two cartoon characters fall over each other]
+Note: Only change the text inside square brackets to match each conversation scene. The Master Prompt below should NEVER be modified.
+
+IMAGE_SIZE: 6 x 9 inches
+
+MASTER_PROMPT: A minimalist hand-drawn cartoon illustration in a quirky, playful, slightly absurd style. Simple rounded characters with exaggerated poses and humorous motion. Clean, confident sketch-like line art with slightly imperfect, organic strokes. Strictly black and white only — no colors, no gray, no gradients, no shading. Hair is always solid black. Clothing includes solid black areas (black shirt or black pants). Faces are extremely simple (dot eyes or minimal features only). Flat high-contrast composition. No realism. No textures. No background details. Focus entirely on character interaction, gesture, and dynamic movement. Overlapping shapes, playful chaos, modern indie cartoon style.
+Color rules: use only pure black (#000000) and pure white (#FFFFFF). Do not use gray, tones, or any other colors.
+
+=== END CUSTOM SETTINGS ===
+
+Create {NUMBER_OF_CONVERSATIONS} {TARGET_LANGUAGE} conversation lessons for {LEVEL} level learners following this EXACT format. Each conversation must include {TRANSLATION_LANGUAGE} translations.
+
+=== FORMAT STRUCTURE ===
+
+For every group of {CONVERSATIONS_PER_TOPIC} conversations, start with:
+
++Topic
+[Topic name from TOPICS list]
+
+Then continue with conversations:
+
+Conversation [number]: [Title in TARGET_LANGUAGE]
+
++Introduction
+[1-2 sentences in English describing the context, who is talking to whom, the situation, and outcome]
+
++Image Prompt
+Size: 6 x 9 inches
+[Scene description for this specific conversation], A minimalist hand-drawn cartoon illustration in a quirky, playful, slightly absurd style. Simple rounded characters with exaggerated poses and humorous motion. Clean, confident sketch-like line art with slightly imperfect, organic strokes. Strictly black and white only — no colors, no gray, no gradients, no shading. Hair is always solid black. Clothing includes solid black areas (black shirt or black pants). Faces are extremely simple (dot eyes or minimal features only). Flat high-contrast composition. No realism. No textures. No background details. Focus entirely on character interaction, gesture, and dynamic movement. Overlapping shapes, playful chaos, modern indie cartoon style.
+Color rules: use only pure black (#000000) and pure white (#FFFFFF). Do not use gray, tones, or any other colors.
+
++Vocabulary
+[word 1 in TARGET_LANGUAGE] → /[IPA]/ → [simple pronunciation] → [English translation]
+[word 2 in TARGET_LANGUAGE] → /[IPA]/ → [simple pronunciation] → [English translation]
+[word 3 in TARGET_LANGUAGE] → /[IPA]/ → [simple pronunciation] → [English translation]
+[10-12 essential words total with accurate IPA pronunciation]
+
++[Title in TARGET_LANGUAGE]
+[Name 1]: [Dialogue in TARGET_LANGUAGE using learned vocabulary]
+[Name 2]: [Response in TARGET_LANGUAGE using learned vocabulary]
+[Name 1]: [Next line in TARGET_LANGUAGE...]
+[15-20 dialogue lines total - MUST use ALL vocabulary words]
+
++[Title in TRANSLATION_LANGUAGE]
+[Name 1]: [Same dialogue translated to TRANSLATION_LANGUAGE]
+[Name 2]: [Same response translated to TRANSLATION_LANGUAGE]
+[Name 1]: [Same next line translated to TRANSLATION_LANGUAGE...]
+[Same number of dialogue lines as original - keep speaker names and order identical]
+
++Questions
+¿[Question in TARGET_LANGUAGE]? / [Question in TRANSLATION_LANGUAGE]?
+a) [Answer A in TARGET_LANGUAGE] / [Answer A in TRANSLATION_LANGUAGE]
+b) [Answer B in TARGET_LANGUAGE] / [Answer B in TRANSLATION_LANGUAGE]
+c) [Answer C in TARGET_LANGUAGE] / [Answer C in TRANSLATION_LANGUAGE]
+
+¿[Question 2]? / [Question 2]?
+a) [Option A] / [Option A]
+b) [Option B] / [Option B]
+c) [Option C] / [Option C]
+
+[Continue for 5 comprehension questions total - test understanding of the conversation]
+
++Answers
+[correct answer 1])
+[correct answer 2])
+[correct answer 3])
+[correct answer 4])
+[correct answer 5])
+
+=== COMPLETE EXAMPLE ===
+
++Topic
+Daily Life & Greetings
+
+Conversation 1: En el Mercado
+
++Introduction
+María goes to the local market to buy fresh vegetables and fruits. She talks with the vendor about prices and makes her purchase.
+
++Image Prompt
+Size: 6 x 9 inches
+A cheerful woman holding a basket talks to a friendly market vendor behind a simple fruit stand with round fruits displayed, A minimalist hand-drawn cartoon illustration in a quirky, playful, slightly absurd style. Simple rounded characters with exaggerated poses and humorous motion. Clean, confident sketch-like line art with slightly imperfect, organic strokes. Strictly black and white only — no colors, no gray, no gradients, no shading. Hair is always solid black. Clothing includes solid black areas (black shirt or black pants). Faces are extremely simple (dot eyes or minimal features only). Flat high-contrast composition. No realism. No textures. No background details. Focus entirely on character interaction, gesture, and dynamic movement. Overlapping shapes, playful chaos, modern indie cartoon style.
+Color rules: use only pure black (#000000) and pure white (#FFFFFF). Do not use gray, tones, or any other colors.
+
++Vocabulary
+mercado → /meɾˈka.ðo/ → mer-kah-doh → market
+verduras → /beɾˈðu.ɾas/ → ver-doo-rahs → vegetables
+frutas → /ˈfɾu.tas/ → froo-tahs → fruits
+comprar → /komˈpɾaɾ/ → kohm-prahr → buy
+precio → /ˈpɾe.sjo/ → preh-syoh → price
+barato → /baˈɾa.to/ → bah-rah-toh → cheap
+fresco → /ˈfɾes.ko/ → frehs-koh → fresh
+por favor → /poɾ faˈβoɾ/ → pohr fah-vohr → please
+
++Conversation
+En el Mercado
+María: Buenos días. Quiero comprar verduras y frutas, por favor.
+Vendedor: ¡Hola! Tengo verduras muy frescas hoy.
+María: ¿Cuál es el precio de las frutas?
+Vendedor: Las frutas están baratas hoy. Dos euros el kilo.
+María: Perfecto. Las frutas están muy frescas.
+Vendedor: Sí, todo está fresco en este mercado.
+María: Voy a comprar verduras también.
+Vendedor: Excelente. ¿Cuánto quiere?
+
+At the Market
+María: Good morning. I want to buy vegetables and fruits, please.
+Vendor: Hello! I have very fresh vegetables today.
+María: What is the price of the fruits?
+Vendor: The fruits are cheap today. Two euros per kilo.
+María: Perfect. The fruits are very fresh.
+Vendor: Yes, everything is fresh in this market.
+María: I'm going to buy vegetables too.
+Vendor: Excellent. How much do you want?
+
++Questions
+¿Dónde está María? / Where is María?
+a) En casa / At home
+b) En el mercado / At the market
+c) En la escuela / At school
+
+¿Qué quiere comprar María? / What does María want to buy?
+a) Ropa / Clothes
+b) Libros / Books
+c) Verduras y frutas / Vegetables and fruits
+
+¿Cómo están las verduras? / How are the vegetables?
+a) Caras / Expensive
+b) Frescas / Fresh
+c) Viejas / Old
+
+¿Cuál es el precio de las frutas? / What is the price of the fruits?
+a) Un euro / One euro
+b) Dos euros / Two euros
+c) Tres euros / Three euros
+
+¿Qué va a comprar María también? / What is María also going to buy?
+a) Verduras / Vegetables
+b) Pan / Bread
+c) Leche / Milk
+
++Answers
+b)
+c)
+b)
+b)
+a)
+
+=== CRITICAL REQUIREMENTS ===
+
+✅ Use EXACT format with + symbol before each section (NO colon after +Topic, +Introduction, +Image, +Vocabulary, +Conversation, +Questions, +Answers)
+✅ Add +Topic section at the beginning of each group of {CONVERSATIONS_PER_TOPIC} conversations (before Conversation 1, Conversation 11, etc.)
+✅ Image section MUST include: "Size: 6 x 9 inches" on first line, then [Scene description specific to conversation], followed by the complete MASTER_PROMPT
+✅ ONLY modify the scene description in brackets for each conversation — NEVER change the Master Prompt or the size specification
+✅ Image prompts are ONLY for the "Illustration Prompts" tab — they will NOT be included in the exported DOCX file
+✅ Vocabulary format MUST be: word → /IPA/ → pronunciation → translation
+✅ ALL vocabulary words MUST appear in BOTH original and translated conversations
+✅ Conversation section MUST have TWO parts:
+   - First: Title in TARGET_LANGUAGE, then dialogue in TARGET_LANGUAGE
+   - Second: Title in TRANSLATION_LANGUAGE, then same dialogue translated
+✅ Keep speaker names and dialogue order IDENTICAL in both language versions
+✅ Questions MUST be bilingual: ¿Question? / Question?
+✅ Options format MUST be: a) Option / Option
+✅ Answers MUST be only letters: a), b), or c)
+✅ Apply LEVEL difficulty ({LEVEL}): {DIFFICULTY_NOTES}
+✅ Cover suggested TOPICS: {TOPICS}
+✅ Each conversation: 15-20 dialogue lines
+✅ Each conversation: 5 comprehension questions with 3 options each
+✅ Keep EXACT section order: Topic (every {CONVERSATIONS_PER_TOPIC} conversations) → Introduction → Image → Vocabulary → Conversation (both languages) → Questions → Answers
+✅ Topic appears on its own page before each group of {CONVERSATIONS_PER_TOPIC} conversations
+
+Generate all {NUMBER_OF_CONVERSATIONS} conversations now following this format exactly!

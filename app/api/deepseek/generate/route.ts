@@ -57,18 +57,27 @@ export const extractThemeFromSubtitle = (subtitle?: string): string | null => {
   // Patterns to catch "X Stories", "Stories about X", "X Themed Stories"
   // Example: "Start Spanish with 30 New Year Stories..." -> "New Year"
   // Example: "Halloween Stories for Kids" -> "Halloween"
-  
+
   // 1. "... X Stories" (ignoring "Short" or number)
   // We look for the word(s) immediately preceding "Stories"
   // Exclude common non-theme adjectives like "Short", "Great", "New", "Best" if they are the ONLY word.
   // But "New Year" is fine.
-  
-  const storiesRegex = /(?:with|contains|of|about|\d+)\s+([a-zA-Z0-9\s'-]+?)\s+Stories/i;
+
+  const storiesRegex =
+    /(?:with|contains|of|about|\d+)\s+([a-zA-Z0-9\s'-]+?)\s+Stories/i;
   const match = s.match(storiesRegex);
-  
+
   if (match && match[1]) {
     const candidate = match[1].trim();
-    const ignored = ["short", "great", "best", "funny", "interesting", "simple", "easy"];
+    const ignored = [
+      "short",
+      "great",
+      "best",
+      "funny",
+      "interesting",
+      "simple",
+      "easy",
+    ];
     if (!ignored.includes(candidate.toLowerCase())) {
       return candidate;
     }
@@ -91,7 +100,7 @@ export const extractThemesFromStories = (
   subtitle?: string
 ) => {
   const titles = stories.map((s) => s.titleOriginal);
-  
+
   // 1. Try to get theme from subtitle first
   let primaryTheme = extractThemeFromSubtitle(subtitle);
 
@@ -99,9 +108,39 @@ export const extractThemesFromStories = (
   if (!primaryTheme) {
     const tokens: string[] = [];
     const stopwords = new Set([
-      "the", "a", "an", "and", "of", "in", "on", "at", "to", "for", "with", "by", "from", "about",
-      "el", "la", "los", "las", "un", "una", "de", "del", "al", "y", "en", "con", "por", "para",
-      "story", "stories", "short", "chapter", "part"
+      "the",
+      "a",
+      "an",
+      "and",
+      "of",
+      "in",
+      "on",
+      "at",
+      "to",
+      "for",
+      "with",
+      "by",
+      "from",
+      "about",
+      "el",
+      "la",
+      "los",
+      "las",
+      "un",
+      "una",
+      "de",
+      "del",
+      "al",
+      "y",
+      "en",
+      "con",
+      "por",
+      "para",
+      "story",
+      "stories",
+      "short",
+      "chapter",
+      "part",
     ]);
 
     titles.forEach((t) => {
@@ -123,7 +162,7 @@ export const extractThemesFromStories = (
       .filter(([, count]) => count > 1)
       .sort((a, b) => b[1] - a[1])
       .map(([w]) => w);
-      
+
     // Capitalize the top token to make it look like a theme
     if (top.length > 0) {
       primaryTheme = top[0].charAt(0).toUpperCase() + top[0].slice(1);
@@ -137,7 +176,7 @@ export const extractThemesFromStories = (
 
   // Generate related themes (just use some keywords from titles or generic ones)
   // For now, we can leave it simple or derive from other top tokens
-  const themeSummary = primaryTheme; 
+  const themeSummary = primaryTheme;
 
   // Sample a few titles
   const examples = titles.slice(0, 3);
@@ -265,180 +304,152 @@ export const generatePrompt = (
 
   switch (type) {
     case "introduction":
-      return `Write an engaging introduction for a language learning book titled "${fullDisplayTitle}" by ${
+      return `Write an engaging introduction for "${fullDisplayTitle}" by ${
         metadata.author
       }.
 
-CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
+CRITICAL: This book teaches ${targetLanguageFromTitle}, NOT English.
 
 Context:
-- The book contains ${stories.length} stories in ${languageName}
-- Example story titles: ${examplesText}
-- Main theme: ${primaryTheme}
-- Related themes: ${themeSummary}
-- Target audience: ${proficiencyLevel} learners
-- SEO Keywords to incorporate naturally: ${seoKeywords.join(", ")}
+- ${stories.length} stories about ${primaryTheme}
+- ${proficiencyLevel} level learners
+- ${targetLanguageFromTitle} stories with English translations
 
-Structure Guidelines (be creative with wording while maintaining these elements):
+Format your response EXACTLY like this (use [P] tags):
 
-1. Opening: Start with a warm, welcoming greeting that mentions "${fullDisplayTitle}". Introduce the book as a guide for learning ${targetLanguageFromTitle} through stories designed for ${proficiencyLevel} learners. Explain that stories are in ${targetLanguageFromTitle} with English translations for support.
+[P]Welcome paragraph: Introduce "${fullDisplayTitle}" and explain how this book helps ${proficiencyLevel} learners master ${targetLanguageFromTitle} through engaging ${primaryTheme} stories.[/P]
 
-2. Book Overview: Describe what makes this book special. Mention the ${primaryTheme} theme and related themes (${themeSummary}). Explain how the stories use repetition to naturally reinforce ${targetLanguageFromTitle} vocabulary and grammar. Highlight what learners will achieve by the end.
+[P]Special features paragraph: Explain what makes this book special - ${themeSummary} themes, natural vocabulary repetition, grammar reinforcement through stories. Emphasize fun, natural learning without boring drills.[/P]
 
-3. What's in This Book: Include a section (with heading) that lists:
-   - ${
-     stories.length
-   } short stories in accessible ${targetLanguageFromTitle} with English translations
-   - Vocabulary lists with pronunciation guides and meanings
-   - Comprehension questions in both languages with answers
-   - Illustration prompts for creative engagement
+[P]Contents paragraph: Describe what's included - ${
+        stories.length
+      } stories with vocabulary (pronunciation guides), English translations, and comprehension questions with answers.[/P]
 
-4. Why This Book: Include a section highlighting:
-   - Appropriate for ${proficiencyLevel} level learners
-   - Engaging ${themeSummary} themes
-   - Progressive learning through story repetition
-   - Natural language acquisition approach
-
-5. Closing: End with an encouraging message inviting ${proficiencyLevel.toLowerCase()} learners to begin their ${targetLanguageFromTitle} journey through ${primaryTheme} stories.
+[P]Closing paragraph: Encouraging message for ${proficiencyLevel} learners to begin their ${targetLanguageFromTitle} reading journey today.[/P]
 
 Requirements:
 - Write in ${languageName}
-- Be engaging, encouraging, and welcoming
-- Include specific references to the stories and themes
-- Use natural, varied language (avoid repetitive phrasing)
-- Format bullet points clearly (· or - symbol)
-- Maintain focus on learning ${targetLanguageFromTitle}, not English
-- Incorporate SEO keywords naturally throughout
+- Use [P]...[/P] tags for EACH paragraph
+- NO bullet points or lists
+- 300-400 words total
+- Natural, warm, engaging tone
+- Include keywords: ${seoKeywords.slice(0, 5).join(", ")}
 `;
 
     case "howToUse":
-      return `Write a helpful "How to Use This Book" section for a language learning book titled "${fullDisplayTitle}" by ${metadata.author}.
+      return `Write a "How to Use This Book" section for "${fullDisplayTitle}".
 
-CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
+CRITICAL: This book teaches ${targetLanguageFromTitle}, NOT English.
 
 Context:
-- The book contains ${stories.length} stories in ${languageName}
-- Example story titles: ${examplesText}
-- Main theme: ${primaryTheme}
-- Related themes: ${themeSummary}
-- Target audience: ${proficiencyLevel} learners
+- ${stories.length} stories about ${primaryTheme}
+- ${proficiencyLevel} level
 
-Structure Guidelines (adapt wording naturally while covering these areas):
+Format your response EXACTLY like this:
 
-1. Opening: Introduce how the book is designed to make learning ${targetLanguageFromTitle} structured, engaging, and effective for ${proficiencyLevel} learners. Explain that stories are in ${targetLanguageFromTitle} with English translations for support.
+[P]Brief introduction (2-3 sentences) explaining how this book helps ${proficiencyLevel} learners master ${targetLanguageFromTitle} through ${primaryTheme} stories.[/P]
 
-2. Main Instructions: Provide clear, practical guidance on:
-   - Reading approach: Start with ${targetLanguageFromTitle} version, use English translation for clarity
-   - Vocabulary learning: How to use the pronunciation guides and meanings effectively
-   - Comprehension practice: Using the questions to test understanding
-   - Regular practice: Suggested frequency and methods (reading aloud, sharing with others)
-   - Creative engagement: Using illustration prompts
+[P]Short sentence introducing the step-by-step reading method:[/P]
 
-3. Tips for Success: Include practical advice such as:
-   - Focusing on understanding main ideas first
-   - Pacing yourself appropriately
-   - Keeping notes for reinforcement
-   - Practicing speaking with others
-   - Enjoying the ${themeSummary} themes to stay motivated
+[LIST_BULLET]
+[ITEM]Preview vocabulary and practice pronunciation[/ITEM]
+[ITEM]Read ${targetLanguageFromTitle} story without translation[/ITEM]
+[ITEM]Check English translation if needed for clarity[/ITEM]
+[ITEM]Read ${targetLanguageFromTitle} version again[/ITEM]
+[ITEM]Answer comprehension questions[/ITEM]
+[ITEM]Read story aloud 2-3 times for pronunciation[/ITEM]
+[ITEM]Review vocabulary and create your own sentences[/ITEM]
+[/LIST_BULLET]
 
-4. Closing: End with an encouraging message about the learning journey at the ${proficiencyLevel} level. Include a ${targetLanguageFromTitle} phrase meaning "Happy reading!" or similar encouragement.
+[P]Short sentence introducing practice tips:[/P]
+
+[LIST_BULLET]
+[ITEM]Study one story per day or at your pace[/ITEM]
+[ITEM]Keep a notebook for new words and phrases[/ITEM]
+[ITEM]Listen to native speakers and compare[/ITEM]
+[ITEM]Practice with a language partner[/ITEM]
+[ITEM]Revisit previous stories weekly[/ITEM]
+[ITEM]Focus on main ideas before details[/ITEM]
+[/LIST_BULLET]
+
+[P]Encouraging closing message (2-3 sentences) about consistency and progress. End with ${targetLanguageFromTitle} phrase for "Happy reading!"[/P]
 
 Requirements:
 - Write in ${languageName}
-- Be instructional, supportive, and clear
-- Reference the actual stories and themes naturally
-- Use varied, natural language
-- Format instructions and tips clearly
-- Maintain focus on learning ${targetLanguageFromTitle}
-- Adapt tone to ${proficiencyLevel} learners' needs
+- Follow the EXACT format with tags
+- Use [P]...[/P] for paragraphs
+- Use [LIST_BULLET]...[/LIST_BULLET] for bullet lists only
+- Use [ITEM]...[/ITEM] for each list item
+- 300-350 words total
 `;
 
     case "conclusion":
-      return `Write a warm, celebratory conclusion for a language learning book titled "${fullDisplayTitle}" by ${metadata.author}.
+      return `Write a warm conclusion for "${fullDisplayTitle}".
 
-CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
+CRITICAL: This book teaches ${targetLanguageFromTitle}, NOT English.
 
 Context:
-- The book contains ${stories.length} stories in ${languageName}
-- Example story titles: ${examplesText}
-- Main theme: ${primaryTheme}
-- Related themes: ${themeSummary}
-- Target audience: ${proficiencyLevel} learners
+- ${stories.length} stories completed
+- ${primaryTheme} and ${themeSummary} themes
+- ${proficiencyLevel} level
 
-Structure Guidelines (vary your expression while including these elements):
+Write exactly 3 paragraphs (separate each with a blank line):
 
-1. Celebration: Congratulate readers on completing the book. Express how the ${themeSummary} stories have made their ${targetLanguageFromTitle} learning journey exciting and memorable. Highlight how these themes helped build skills appropriate for ${proficiencyLevel} learners.
+Paragraph 1: Congratulate readers on completing all ${stories.length} ${primaryTheme} stories. Highlight their ${targetLanguageFromTitle} progress and vocabulary growth. Express pride in their achievement.
 
-2. Feedback Request: Politely ask readers to share their thoughts through reviews. Mention that their feedback helps create better resources for learners. (Express this naturally, not word-for-word.)
+Paragraph 2: Politely ask readers to leave a review to help other ${targetLanguageFromTitle} learners find this book. Mention that feedback helps create better learning resources.
 
-3. Continued Learning: Encourage readers to:
-   - Use new ${targetLanguageFromTitle} words in conversations
-   - Write their own mini-stories
-   - Revisit the stories for practice
-   - Share with friends or family
-   - Continue their ${targetLanguageFromTitle} learning adventure
-
-4. Closing: End with a ${targetLanguageFromTitle} phrase meaning "Thank you and happy learning!" or similar encouraging message.
+Paragraph 3: Encourage continued practice - use new words in conversations, write own stories, revisit favorite lessons, keep reading ${targetLanguageFromTitle}. End with ${targetLanguageFromTitle} phrase meaning "Thank you and happy learning!"
 
 Requirements:
 - Write in ${languageName}
-- Be celebratory, warm, and encouraging
-- Reference the stories and themes naturally
-- Use varied, heartfelt language
-- Maintain focus on learning ${targetLanguageFromTitle}
-- Match tone to ${proficiencyLevel} learners
-- Include feedback request and continued learning encouragement
+- SEPARATE PARAGRAPHS WITH BLANK LINES
+- No bullet points or lists
+- Warm, celebratory tone
+- 200-250 words total
+- Natural, flowing style
 `;
 
     case "description":
-      return `Write a compelling book description for a language learning book titled "${fullDisplayTitle}" by ${
+      return `Write a compelling book description for "${fullDisplayTitle}" by ${
         metadata.author
       }.
 
-CRITICAL INSTRUCTION: Analyze the book title and subtitle to determine the target language. The book teaches ${targetLanguageFromTitle}. You MUST write about learning ${targetLanguageFromTitle}, NOT English. English is only used for translations to help understand the target language.
+CRITICAL: This book teaches ${targetLanguageFromTitle}, NOT English.
 
 Context:
-- The book contains ${stories.length} stories in ${languageName}
-- Example story titles: ${examplesText}
-- Main theme: ${primaryTheme}
-- Related themes: ${themeSummary}
-- Target audience: ${proficiencyLevel} learners
-- SEO Keywords to incorporate: ${seoKeywords.join(", ")}
+- ${stories.length} stories about ${primaryTheme}
+- ${proficiencyLevel} level
+- SEO keywords: ${seoKeywords.slice(0, 6).join(", ")}
 
-Structure Guidelines (use HTML with ONLY <p>, <b>, <i>, <br>, <ul>, <li> tags):
+Write in HTML format using ONLY these tags: <p>, <b>, <ul>, <li>
 
-1. Hook: Open with an engaging question or statement that highlights learning ${targetLanguageFromTitle} in an enjoyable way. Mention the ${proficiencyLevel} level.
+Structure:
 
-2. Value Proposition: Explain how the book makes learning ${targetLanguageFromTitle} fun, natural, and engaging through ${primaryTheme} stories. Emphasize it's designed for ${proficiencyLevel} learners and avoids heavy memorization.
+<p>Opening paragraph (3-4 sentences): Hook readers with an engaging question or statement about learning ${targetLanguageFromTitle} through ${primaryTheme} stories. Mention ${proficiencyLevel} level.</p>
 
-3. Learning Outcomes: Describe what readers will achieve—stronger ${targetLanguageFromTitle} skills, expanded vocabulary, and reading confidence.
+<p>Value paragraph (3-4 sentences): Explain how this book makes learning ${targetLanguageFromTitle} natural and fun through ${themeSummary} stories. Emphasize immersive reading, not grammar drills.</p>
 
-4. Key Features: Create a "Why This Book Is Perfect for You" section with a bulleted list covering:
-   - Learning ${targetLanguageFromTitle} through engaging stories (not drills)
-   - ${
-     stories.length
-   } captivating ${primaryTheme} stories with examples from actual titles
-   - Appropriate for ${proficiencyLevel} level
-   - Progressive difficulty
-   - ${targetLanguageFromTitle}-English translations
-   - Reading comprehension improvement
-   - Vocabulary expansion with pronunciation guides
-   - Practical phrases for everyday use
-   - Illustration prompts for creativity
+<p><b>What You'll Get:</b></p>
+<ul>
+<li>${
+        stories.length
+      } captivating ${targetLanguageFromTitle} ${primaryTheme} stories</li>
+<li>Perfect for ${proficiencyLevel} level - progressive difficulty</li>
+<li>Full English translations for understanding</li>
+<li>Vocabulary lists with pronunciation guides</li>
+<li>Comprehension questions with answers</li>
+<li>Practical phrases for everyday use</li>
+</ul>
 
-5. SEO & Call to Action: Naturally incorporate SEO keywords. Include a call-to-action encouraging purchase.
-
-6. Note: Add a brief note about the ${primaryTheme} focus, practice suggestions, and the convenience of having all stories in one place.
+<p>Closing paragraph (2-3 sentences): Strong call-to-action encouraging readers to start their ${targetLanguageFromTitle} reading journey today.</p>
 
 Requirements:
 - Write in ${languageName}
-- Use ONLY <p>, <b>, <i>, <br>, <ul>, <li> HTML tags (no markdown, no wrapper tags)
-- Be engaging and purchase-inspiring
-- Reference actual stories and themes naturally
-- Vary language and phrasing
-- Include 2-3 specific adventure examples based on story titles
-- Maintain focus on learning ${targetLanguageFromTitle}
-- Format bullet points clearly
+- 300-350 words total
+- Use HTML tags correctly
+- Sales-focused, persuasive tone
+- Include keywords naturally: ${seoKeywords.slice(0, 3).join(", ")}
 `;
 
     default:
@@ -506,7 +517,8 @@ export async function POST(request: NextRequest) {
                   content: prompt,
                 },
               ],
-              max_tokens: 1000,
+              max_tokens:
+                type === "description" ? 800 : type === "howToUse" ? 700 : 600,
               temperature: 0.7,
             }),
           }

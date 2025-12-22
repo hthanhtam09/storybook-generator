@@ -1,6 +1,12 @@
 "use client";
 
-import { BookOpen, Search, Puzzle, Gamepad2 } from "lucide-react";
+import {
+  BookOpen,
+  Search,
+  Puzzle,
+  Gamepad2,
+  MessageCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -31,6 +37,16 @@ export function Header() {
             <Link href="/" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               Story Generator
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant={pathname === "/conversations" ? "default" : "ghost"}
+            size="sm"
+          >
+            <Link href="/conversations" className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Conversations
             </Link>
           </Button>
           <Button
