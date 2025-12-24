@@ -10,7 +10,6 @@ import type {
   ConversationLesson,
   TemplateFile,
 } from "@/lib/types";
-import type { ConversationImageFile } from "@/components/conversations-images";
 import type { ConversationMetadata } from "@/components/conversations-metadata";
 
 const HARDCODED_TEMPLATE: TemplateFile = {
@@ -40,7 +39,6 @@ export default function ConversationsPage() {
     description: "",
     fullPageImage: undefined,
   });
-  const [images, setImages] = useState<ConversationImageFile[]>([]);
 
   const handleLessonsChange = (lessons: ConversationLesson[]) => {
     setConfig((prev) => ({
@@ -59,10 +57,6 @@ export default function ConversationsPage() {
     }));
   };
 
-  const handleImagesChange = (newImages: ConversationImageFile[]) => {
-    setImages(newImages);
-  };
-
   const handleExportSuccess = () => {
     // Could add success feedback here if needed
   };
@@ -77,14 +71,12 @@ export default function ConversationsPage() {
             <ConversationsPanel
               onLessonsChange={handleLessonsChange}
               onMetadataChange={handleMetadataChange}
-              onImagesChange={handleImagesChange}
             />
           </div>
           <div className="w-1/2">
             <ConversationsPreview
               config={config}
               metadata={metadata}
-              images={images}
               template={HARDCODED_TEMPLATE}
               onExportSuccess={handleExportSuccess}
             />

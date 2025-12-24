@@ -3,44 +3,94 @@
 TARGET_LANGUAGE: Spanish
 TRANSLATION_LANGUAGE: English
 LEVEL: A2
-NUMBER_OF_CONVERSATIONS: 20
+NUMBER_OF_CONVERSATIONS: 50
 CONVERSATIONS_PER_TOPIC: 10
 TOPICS: 
   Topic 1: Daily Life & Greetings
   Topic 2: Food & Social Situations
+  Topic 3: Work & Study
+  Topic 4: Health & Daily Habits
+  Topic 5: Shopping & Money
 Note: Do NOT include conversation numbers in the topic text. Just the topic name.
 DIFFICULTY_NOTES: Very basic grammar, present tense, simple sentences, common vocabulary
 
-IMAGE_PROMPT_TEMPLATE: [A funny chaotic moment where two cartoon characters fall over each other]
-Note: Only change the text inside square brackets to match each conversation scene. The Master Prompt below should NEVER be modified.
-
-IMAGE_SIZE: 6 x 9 inches
-
-MASTER_PROMPT: A minimalist hand-drawn cartoon illustration in a quirky, playful, slightly absurd style. Simple rounded characters with exaggerated poses and humorous motion. Clean, confident sketch-like line art with slightly imperfect, organic strokes. Strictly black and white only — no colors, no gray, no gradients, no shading. Hair is always solid black. Clothing includes solid black areas (black shirt or black pants). Faces are extremely simple (dot eyes or minimal features only). Flat high-contrast composition. No realism. No textures. No background details. Focus entirely on character interaction, gesture, and dynamic movement. Overlapping shapes, playful chaos, modern indie cartoon style.
-Color rules: use only pure black (#000000) and pure white (#FFFFFF). Do not use gray, tones, or any other colors.
-
 === END CUSTOM SETTINGS ===
 
-Create {NUMBER_OF_CONVERSATIONS} {TARGET_LANGUAGE} conversation lessons for {LEVEL} level learners following this EXACT format. Each conversation must include {TRANSLATION_LANGUAGE} translations.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 YOUR TASK: Create {TARGET_LANGUAGE} conversation lessons - ONE TOPIC AT A TIME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ IMPORTANT: This task is split into MULTIPLE PARTS to avoid output length issues.
+Each part focuses on ONE TOPIC with {CONVERSATIONS_PER_TOPIC} conversations.
+Total: {NUMBER_OF_CONVERSATIONS} conversations across 5 topics.
+
+Each conversation includes: Introduction, Vocabulary, Dialogue (2 versions), Questions, and Answers.
+
+📋 GENERATION STRATEGY - MULTI-PART APPROACH:
+✅ PART 1: Topic 1 (Conversations 1-10)   → Generate {CONVERSATIONS_PER_TOPIC} conversations
+✅ PART 2: Topic 2 (Conversations 11-20)  → Generate {CONVERSATIONS_PER_TOPIC} conversations
+✅ PART 3: Topic 3 (Conversations 21-30)  → Generate {CONVERSATIONS_PER_TOPIC} conversations
+✅ PART 4: Topic 4 (Conversations 31-40)  → Generate {CONVERSATIONS_PER_TOPIC} conversations
+✅ PART 5: Topic 5 (Conversations 41-50)  → Generate {CONVERSATIONS_PER_TOPIC} conversations
+
+📋 STRUCTURE REQUIREMENT:
+✅ Total conversations: {NUMBER_OF_CONVERSATIONS} (split into 5 parts)
+✅ Number of topics: 5 topics
+✅ Conversations per topic: {CONVERSATIONS_PER_TOPIC} conversations each
+✅ Level: {LEVEL} ({DIFFICULTY_NOTES})
+✅ Each conversation must include {TRANSLATION_LANGUAGE} translations
+
+🎯 FOR THIS GENERATION: You will generate ONE TOPIC at a time
+- Each generation produces {CONVERSATIONS_PER_TOPIC} complete conversations
+- Avoids overly long outputs
+- Maintains consistent quality across all conversations
+
+🔢 DETAILED BREAKDOWN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Topic 1: Daily Life & Greetings        → Conversations 1-10   (10 conversations)
+Topic 2: Food & Social Situations      → Conversations 11-20  (10 conversations)
+Topic 3: Work & Study                  → Conversations 21-30  (10 conversations)
+Topic 4: Health & Daily Habits         → Conversations 31-40  (10 conversations)
+Topic 5: Shopping & Money              → Conversations 41-50  (10 conversations)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+= TOTAL: {NUMBER_OF_CONVERSATIONS} CONVERSATIONS
+
+🚨 CRITICAL RULES:
+❗ You will generate ONE TOPIC ({CONVERSATIONS_PER_TOPIC} conversations) per generation
+❗ Start with +Topic section, then generate all {CONVERSATIONS_PER_TOPIC} conversations for that topic
+❗ Each conversation should be complete with all required sections
+❗ DO NOT add progress notes, comments, or extra text between conversations
+❗ Follow the EXACT format - only include the required sections (+Topic, +Introduction, +Vocabulary, etc.)
+❗ After completing one topic, the system will request the next topic separately
+❗ NEVER duplicate sections - each section appears ONLY ONCE per conversation (one +Introduction, one +Vocabulary, one +Questions, one +Answers)
+❗ CONVERSATION TITLES MUST START WITH + SYMBOL:
+   ✅ CORRECT: +En el Mercado
+   ✅ CORRECT: +At the Market
+   ❌ WRONG: En el Mercado (missing +)
+   ❌ WRONG: At the Market (missing +)
 
 === FORMAT STRUCTURE ===
 
-For every group of {CONVERSATIONS_PER_TOPIC} conversations, start with:
+⚠️ IMPORTANT OUTPUT RULES:
+- You are creating ONE TOPIC with {CONVERSATIONS_PER_TOPIC} conversations in this generation
+- Output ONLY the conversations in the exact format below
+- DO NOT add any extra text, comments, progress notes, or separators
+- DO NOT write things like "Conversation 1 complete", "10/10 done", etc.
+- DO NOT repeat sections - each section (+Introduction, +Vocabulary, etc.) should appear ONLY ONCE per conversation
+- Just the pure conversation content following the format
+
+Start with the +Topic section, then generate {CONVERSATIONS_PER_TOPIC} conversations:
 
 +Topic
 [Topic name from TOPICS list]
 
-Then continue with conversations:
+Then continue with {CONVERSATIONS_PER_TOPIC} conversations before moving to the next topic:
 
 Conversation [number]: [Title in TARGET_LANGUAGE]
 
 +Introduction
-[1-2 sentences in English describing the context, who is talking to whom, the situation, and outcome]
-
-+Image Prompt
-Size: 6 x 9 inches
-[Scene description for this specific conversation], A minimalist hand-drawn cartoon illustration in a quirky, playful, slightly absurd style. Simple rounded characters with exaggerated poses and humorous motion. Clean, confident sketch-like line art with slightly imperfect, organic strokes. Strictly black and white only — no colors, no gray, no gradients, no shading. Hair is always solid black. Clothing includes solid black areas (black shirt or black pants). Faces are extremely simple (dot eyes or minimal features only). Flat high-contrast composition. No realism. No textures. No background details. Focus entirely on character interaction, gesture, and dynamic movement. Overlapping shapes, playful chaos, modern indie cartoon style.
-Color rules: use only pure black (#000000) and pure white (#FFFFFF). Do not use gray, tones, or any other colors.
+[5-8 sentences in English describing the context, who is talking to whom, the situation, and outcome]
+NOTE: Introduction MUST be written in English only.
 
 +Vocabulary
 [word 1 in TARGET_LANGUAGE] → /[IPA]/ → [simple pronunciation] → [English translation]
@@ -49,29 +99,46 @@ Color rules: use only pure black (#000000) and pure white (#FFFFFF). Do not use 
 [10-12 essential words total with accurate IPA pronunciation]
 
 +[Title in TARGET_LANGUAGE]
+🚨 CRITICAL: The conversation title MUST start with + symbol!
 [Name 1]: [Dialogue in TARGET_LANGUAGE using learned vocabulary]
 [Name 2]: [Response in TARGET_LANGUAGE using learned vocabulary]
 [Name 1]: [Next line in TARGET_LANGUAGE...]
 [15-20 dialogue lines total - MUST use ALL vocabulary words]
 
 +[Title in TRANSLATION_LANGUAGE]
+🚨 CRITICAL: The translated title MUST also start with + symbol!
 [Name 1]: [Same dialogue translated to TRANSLATION_LANGUAGE]
 [Name 2]: [Same response translated to TRANSLATION_LANGUAGE]
 [Name 1]: [Same next line translated to TRANSLATION_LANGUAGE...]
 [Same number of dialogue lines as original - keep speaker names and order identical]
 
 +Questions
-¿[Question in TARGET_LANGUAGE]? / [Question in TRANSLATION_LANGUAGE]?
+¿[Question 1 in TARGET_LANGUAGE]? / [Question 1 in TRANSLATION_LANGUAGE]?
 a) [Answer A in TARGET_LANGUAGE] / [Answer A in TRANSLATION_LANGUAGE]
 b) [Answer B in TARGET_LANGUAGE] / [Answer B in TRANSLATION_LANGUAGE]
 c) [Answer C in TARGET_LANGUAGE] / [Answer C in TRANSLATION_LANGUAGE]
 
-¿[Question 2]? / [Question 2]?
-a) [Option A] / [Option A]
-b) [Option B] / [Option B]
-c) [Option C] / [Option C]
+¿[Question 2 in TARGET_LANGUAGE]? / [Question 2 in TRANSLATION_LANGUAGE]?
+a) [Answer A in TARGET_LANGUAGE] / [Answer A in TRANSLATION_LANGUAGE]
+b) [Answer B in TARGET_LANGUAGE] / [Answer B in TRANSLATION_LANGUAGE]
+c) [Answer C in TARGET_LANGUAGE] / [Answer C in TRANSLATION_LANGUAGE]
 
-[Continue for 5 comprehension questions total - test understanding of the conversation]
+¿[Question 3 in TARGET_LANGUAGE]? / [Question 3 in TRANSLATION_LANGUAGE]?
+a) [Answer A in TARGET_LANGUAGE] / [Answer A in TRANSLATION_LANGUAGE]
+b) [Answer B in TARGET_LANGUAGE] / [Answer B in TRANSLATION_LANGUAGE]
+c) [Answer C in TARGET_LANGUAGE] / [Answer C in TRANSLATION_LANGUAGE]
+
+¿[Question 4 in TARGET_LANGUAGE]? / [Question 4 in TRANSLATION_LANGUAGE]?
+a) [Answer A in TARGET_LANGUAGE] / [Answer A in TRANSLATION_LANGUAGE]
+b) [Answer B in TARGET_LANGUAGE] / [Answer B in TRANSLATION_LANGUAGE]
+c) [Answer C in TARGET_LANGUAGE] / [Answer C in TRANSLATION_LANGUAGE]
+
+¿[Question 5 in TARGET_LANGUAGE]? / [Question 5 in TRANSLATION_LANGUAGE]?
+a) [Answer A in TARGET_LANGUAGE] / [Answer A in TRANSLATION_LANGUAGE]
+b) [Answer B in TARGET_LANGUAGE] / [Answer B in TRANSLATION_LANGUAGE]
+c) [Answer C in TARGET_LANGUAGE] / [Answer C in TRANSLATION_LANGUAGE]
+
+🚨 CRITICAL: MUST have EXACTLY 5 questions with 3 options each - NO MORE, NO LESS!
 
 +Answers
 [correct answer 1])
@@ -79,6 +146,10 @@ c) [Option C] / [Option C]
 [correct answer 3])
 [correct answer 4])
 [correct answer 5])
+
+🚨 CRITICAL: MUST have EXACTLY 5 answers corresponding to the 5 questions above!
+
+IMPORTANT: Answers MUST be randomized and include ALL three options (a, b, c) in every conversation!
 
 === COMPLETE EXAMPLE ===
 
@@ -90,11 +161,6 @@ Conversation 1: En el Mercado
 +Introduction
 María goes to the local market to buy fresh vegetables and fruits. She talks with the vendor about prices and makes her purchase.
 
-+Image Prompt
-Size: 6 x 9 inches
-A cheerful woman holding a basket talks to a friendly market vendor behind a simple fruit stand with round fruits displayed, A minimalist hand-drawn cartoon illustration in a quirky, playful, slightly absurd style. Simple rounded characters with exaggerated poses and humorous motion. Clean, confident sketch-like line art with slightly imperfect, organic strokes. Strictly black and white only — no colors, no gray, no gradients, no shading. Hair is always solid black. Clothing includes solid black areas (black shirt or black pants). Faces are extremely simple (dot eyes or minimal features only). Flat high-contrast composition. No realism. No textures. No background details. Focus entirely on character interaction, gesture, and dynamic movement. Overlapping shapes, playful chaos, modern indie cartoon style.
-Color rules: use only pure black (#000000) and pure white (#FFFFFF). Do not use gray, tones, or any other colors.
-
 +Vocabulary
 mercado → /meɾˈka.ðo/ → mer-kah-doh → market
 verduras → /beɾˈðu.ɾas/ → ver-doo-rahs → vegetables
@@ -105,8 +171,8 @@ barato → /baˈɾa.to/ → bah-rah-toh → cheap
 fresco → /ˈfɾes.ko/ → frehs-koh → fresh
 por favor → /poɾ faˈβoɾ/ → pohr fah-vohr → please
 
-+Conversation
-En el Mercado
++En el Mercado
+⚠️ NOTE: Title MUST start with + symbol (as shown above)
 María: Buenos días. Quiero comprar verduras y frutas, por favor.
 Vendedor: ¡Hola! Tengo verduras muy frescas hoy.
 María: ¿Cuál es el precio de las frutas?
@@ -116,7 +182,8 @@ Vendedor: Sí, todo está fresco en este mercado.
 María: Voy a comprar verduras también.
 Vendedor: Excelente. ¿Cuánto quiere?
 
-At the Market
++At the Market
+⚠️ NOTE: Translated title MUST also start with + symbol (as shown above)
 María: Good morning. I want to buy vegetables and fruits, please.
 Vendor: Hello! I have very fresh vegetables today.
 María: What is the price of the fruits?
@@ -129,23 +196,23 @@ Vendor: Excellent. How much do you want?
 +Questions
 ¿Dónde está María? / Where is María?
 a) En casa / At home
-b) En el mercado / At the market
-c) En la escuela / At school
+b) En la escuela / At school
+c) En el mercado / At the market
 
 ¿Qué quiere comprar María? / What does María want to buy?
-a) Ropa / Clothes
+a) Verduras y frutas / Vegetables and fruits
 b) Libros / Books
-c) Verduras y frutas / Vegetables and fruits
+c) Ropa / Clothes
 
 ¿Cómo están las verduras? / How are the vegetables?
-a) Caras / Expensive
+a) Viejas / Old
 b) Frescas / Fresh
-c) Viejas / Old
+c) Caras / Expensive
 
 ¿Cuál es el precio de las frutas? / What is the price of the fruits?
-a) Un euro / One euro
-b) Dos euros / Two euros
-c) Tres euros / Three euros
+a) Tres euros / Three euros
+b) Un euro / One euro
+c) Dos euros / Two euros
 
 ¿Qué va a comprar María también? / What is María also going to buy?
 a) Verduras / Vegetables
@@ -153,33 +220,557 @@ b) Pan / Bread
 c) Leche / Milk
 
 +Answers
+c)
+a)
 b)
 c)
-b)
-b)
 a)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[END OF EXAMPLE - The text above is the EXACT output format you should follow]
+[The analysis below is for your understanding ONLY - DO NOT include it in your output]
+
+✅ PATTERN ANALYSIS (for reference only):
+- This uses Pattern 4: c), a), b), c), a)
+- Answer "a)" appears 2 times, "b)" appears 1 time, "c)" appears 2 times
+- Well distributed and follows the rotation schedule
+
+Remember: Your output should ONLY include the conversation sections shown in the example above.
+DO NOT include any analysis, notes, or extra text like this explanation.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ IMPORTANT NOTE: The example above shows only ONE conversation. For each topic generation, you need to create {CONVERSATIONS_PER_TOPIC} conversations following this same format!
 
 === CRITICAL REQUIREMENTS ===
 
-✅ Use EXACT format with + symbol before each section (NO colon after +Topic, +Introduction, +Image, +Vocabulary, +Conversation, +Questions, +Answers)
+✅ Use EXACT format with + symbol before each section (NO colon after +Topic, +Introduction, +Vocabulary, +Conversation, +Questions, +Answers)
 ✅ Add +Topic section at the beginning of each group of {CONVERSATIONS_PER_TOPIC} conversations (before Conversation 1, Conversation 11, etc.)
-✅ Image section MUST include: "Size: 6 x 9 inches" on first line, then [Scene description specific to conversation], followed by the complete MASTER_PROMPT
-✅ ONLY modify the scene description in brackets for each conversation — NEVER change the Master Prompt or the size specification
-✅ Image prompts are ONLY for the "Illustration Prompts" tab — they will NOT be included in the exported DOCX file
+✅ Introduction MUST be written in English only (5-8 sentences describing context, speakers, situation, and outcome)
+🚫 NEVER repeat sections - each section should appear ONLY ONCE per conversation:
+   ❌ DO NOT write +Introduction twice
+   ❌ DO NOT write +Vocabulary twice
+   ❌ DO NOT write +Questions twice
 ✅ Vocabulary format MUST be: word → /IPA/ → pronunciation → translation
 ✅ ALL vocabulary words MUST appear in BOTH original and translated conversations
 ✅ Conversation section MUST have TWO parts:
-   - First: Title in TARGET_LANGUAGE, then dialogue in TARGET_LANGUAGE
-   - Second: Title in TRANSLATION_LANGUAGE, then same dialogue translated
+   - First: +Title in TARGET_LANGUAGE (MUST start with +), then dialogue in TARGET_LANGUAGE
+   - Second: +Title in TRANSLATION_LANGUAGE (MUST start with +), then same dialogue translated
 ✅ Keep speaker names and dialogue order IDENTICAL in both language versions
+🚨 CRITICAL: Conversation titles MUST start with + symbol (e.g., +En el Mercado, NOT "En el Mercado")
 ✅ Questions MUST be bilingual: ¿Question? / Question?
 ✅ Options format MUST be: a) Option / Option
-✅ Answers MUST be only letters: a), b), or c)
+✅ NO extra text, comments, or notes between sections - ONLY the required format elements
+
+🚨🚨🚨 CRITICAL: 5 QUESTIONS REQUIREMENT 🚨🚨🚨
+✅ EVERY conversation MUST have EXACTLY 5 questions
+✅ EVERY question MUST have EXACTLY 3 options (a, b, c)
+✅ EVERY conversation MUST have EXACTLY 5 answers in +Answers section
+✅ NO conversation should have 4 questions, 6 questions, or any number other than 5!
+✅ Count your questions BEFORE moving to +Answers: 1, 2, 3, 4, 5 ✓
+❌ WRONG: Having only 4 questions
+❌ WRONG: Having 6 or more questions
+❌ WRONG: Missing answer options
+
+🔴 CRITICAL: ANSWER RANDOMIZATION REQUIREMENT 🔴
+✅ Answers MUST be RANDOMIZED across ALL 5 questions
+✅ MUST include ALL THREE options: a), b), AND c) in EVERY conversation
+✅ Do NOT create patterns like all b) or mostly b) - VARY the answers
+
+🔴 MANDATORY DISTRIBUTION REQUIREMENTS FOR EACH CONVERSATION:
+Each conversation MUST follow ONE of these EXACT distributions:
+✅ Distribution 1: TWO a) + TWO b) + ONE c)    → Total: 2a, 2b, 1c
+✅ Distribution 2: ONE a) + TWO b) + TWO c)    → Total: 1a, 2b, 2c
+✅ Distribution 3: TWO a) + ONE b) + TWO c)    → Total: 2a, 1b, 2c
+
+🚨 CRITICAL: NO distribution can have THREE or more of the same answer!
+❌ WRONG: 3a + 1b + 1c (three a's)
+❌ WRONG: 1a + 3b + 1c (three b's) 
+❌ WRONG: 1a + 4b + 0c (four b's, no c)
+❌ WRONG: 0a + 3b + 2c (no a's, three b's)
+
+🚫 CRITICAL RULE: NO MORE THAN TWO (2) CONSECUTIVE SAME ANSWERS!
+❌ b), b), b), b), a) - WRONG! (4 b's in a row)
+❌ a), b), b), b), b) - WRONG! (4 b's in a row)
+❌ b), b), c), b), b) - WRONG! (2 b's then 2 b's = pattern)
+
+✅ EXAMPLES OF GOOD ANSWER DISTRIBUTION (Well-mixed, all options present): 
+  - a), b), c), a), b) ✓ CORRECT → 2a + 2b + 1c (Distribution 1)
+  - c), a), b), c), b) ✓ CORRECT → 1a + 2b + 2c (Distribution 2)
+  - b), c), a), b), c) ✓ CORRECT → 1a + 2b + 2c (Distribution 2)
+  - a), c), b), a), c) ✓ CORRECT → 2a + 1b + 2c (Distribution 3)
+  - c), b), a), c), a) ✓ CORRECT → 2a + 1b + 2c (Distribution 3)
+  - b), a), c), b), a) ✓ CORRECT → 2a + 2b + 1c (Distribution 1)
+
+❌ EXAMPLES OF BAD ANSWER DISTRIBUTION (Too many of one option): 
+  - b), b), b), b), a) ✗ REJECTED → 1a + 4b + 0c (FOUR b's! No c!)
+  - a), b), b), b), b) ✗ REJECTED → 1a + 4b + 0c (FOUR b's! No c!)
+  - b), b), c), b), b) ✗ REJECTED → 0a + 4b + 1c (FOUR b's! No a!)
+  - a), a), b), b), b) ✗ REJECTED → 2a + 3b + 0c (THREE b's! No c!)
+  - b), a), b), a), b) ✗ REJECTED → 2a + 3b + 0c (THREE b's! No c!)
+  - c), c), c), a), b) ✗ REJECTED → 1a + 1b + 3c (THREE c's!)
+
+🎯 HOW TO ENSURE ANSWER VARIETY AND AVOID TOO MANY b) ANSWERS:
+
+STEP 1: Choose ONE approved pattern (rotate between conversations):
+   - Pattern 1: a), b), c), a), b) → Distribution 1 (2a + 2b + 1c)
+   - Pattern 2: c), a), b), c), b) → Distribution 2 (1a + 2b + 2c)
+   - Pattern 3: b), c), a), b), c) → Distribution 2 (1a + 2b + 2c)
+   - Pattern 4: a), c), b), a), c) → Distribution 3 (2a + 1b + 2c)
+   - Pattern 5: c), b), a), c), a) → Distribution 3 (2a + 1b + 2c)
+   - Pattern 6: b), a), c), b), a) → Distribution 1 (2a + 2b + 1c)
+
+STEP 2: VERIFY your pattern BEFORE using it:
+   ✓ Count a's → Must be 1 or 2 (never 0, never 3+)
+   ✓ Count b's → Must be 1 or 2 (never 0, never 3+)
+   ✓ Count c's → Must be 1 or 2 (never 0, never 3+)
+
+STEP 3: Design questions to match your pattern
+   - Place correct answer in positions according to your chosen pattern
+   - Mix up the positions so correct answers appear in a), b), AND c) positions
+
+🚫 NEVER USE THESE PATTERNS (Too many b's or missing options):
+   ❌ a), b), b), b), b) → 1a + 4b + 0c (FORBIDDEN!)
+   ❌ b), b), b), b), a) → 1a + 4b + 0c (FORBIDDEN!)
+   ❌ b), b), c), b), b) → 0a + 4b + 1c (FORBIDDEN!)
+   ❌ b), a), b), a), b) → 2a + 3b + 0c (FORBIDDEN!)
+   ❌ a), a), a), b), c) → 3a + 1b + 1c (FORBIDDEN!)
 ✅ Apply LEVEL difficulty ({LEVEL}): {DIFFICULTY_NOTES}
-✅ Cover suggested TOPICS: {TOPICS}
+✅ Cover ALL 5 TOPICS in order: {TOPICS}
 ✅ Each conversation: 15-20 dialogue lines
 ✅ Each conversation: 5 comprehension questions with 3 options each
-✅ Keep EXACT section order: Topic (every {CONVERSATIONS_PER_TOPIC} conversations) → Introduction → Image → Vocabulary → Conversation (both languages) → Questions → Answers
+✅ Keep EXACT section order: Topic (every {CONVERSATIONS_PER_TOPIC} conversations) → Introduction → Vocabulary → Conversation (both languages) → Questions → Answers
 ✅ Topic appears on its own page before each group of {CONVERSATIONS_PER_TOPIC} conversations
+✅ MANDATORY: Each conversation MUST have mixed answers - each option (a, b, c) appears 1-2 times, NO option appears 3+ times
+✅ VERIFY: Before finishing each conversation, count answers: a=1-2, b=1-2, c=1-2. If ANY has 3+, FIX IT IMMEDIATELY!
+✅ FORBIDDEN: Patterns like b), b), b), b), a) or a), b), b), b), b) - these have too many repeats!
 
-Generate all {NUMBER_OF_CONVERSATIONS} conversations now following this format exactly!
+🔢 QUANTITY REQUIREMENT (MOST IMPORTANT!):
+✅ PER GENERATION: {CONVERSATIONS_PER_TOPIC} conversations for the current topic
+✅ Topic 1 (Part 1): Conversations 1-10
+✅ Topic 2 (Part 2): Conversations 11-20
+✅ Topic 3 (Part 3): Conversations 21-30
+✅ Topic 4 (Part 4): Conversations 31-40
+✅ Topic 5 (Part 5): Conversations 41-50
+✅ Each generation produces exactly {CONVERSATIONS_PER_TOPIC} complete conversations
+✅ TOTAL across all parts: {NUMBER_OF_CONVERSATIONS} conversations
+
+🔴 FINAL CRITICAL REMINDER BEFORE GENERATING:🔴
+
+EVERY SINGLE CONVERSATION MUST HAVE WELL-MIXED ANSWERS!
+
+✅ ONLY USE THESE 6 APPROVED PATTERNS (All 3 options present, well balanced):
+1. a), b), c), a), b) ✓ Distribution 1: 2a + 2b + 1c → APPROVED
+2. c), a), b), c), b) ✓ Distribution 2: 1a + 2b + 2c → APPROVED
+3. b), c), a), b), c) ✓ Distribution 2: 1a + 2b + 2c → APPROVED
+4. a), c), b), a), c) ✓ Distribution 3: 2a + 1b + 2c → APPROVED
+5. c), b), a), c), a) ✓ Distribution 3: 2a + 1b + 2c → APPROVED
+6. b), a), c), b), a) ✓ Distribution 1: 2a + 2b + 1c → APPROVED
+
+❌ THESE PATTERNS ARE FORBIDDEN (Unbalanced, too many b's, missing options):
+1. a), b), b), b), b) ✗ FORBIDDEN → 1a + 4b + 0c (FOUR b's!)
+2. b), b), b), b), a) ✗ FORBIDDEN → 1a + 4b + 0c (FOUR b's!)
+3. b), b), c), b), b) ✗ FORBIDDEN → 0a + 4b + 1c (FOUR b's!)
+4. b), a), b), a), b) ✗ FORBIDDEN → 2a + 3b + 0c (THREE b's, no c!)
+5. a), a), b), b), b) ✗ FORBIDDEN → 2a + 3b + 0c (THREE b's!)
+6. c), c), c), a), b) ✗ FORBIDDEN → 1a + 1b + 3c (THREE c's!)
+7. a), b), b), b), c) ✗ FORBIDDEN → 1a + 3b + 1c (THREE b's!)
+
+⚠️ COMMON MISTAKES TO AVOID:
+1. ❌ Using too many b) answers (like b), b), b), b), a)) ← MOST COMMON ERROR!
+2. ❌ Forgetting to include answer c)
+3. ❌ Repeating the same answer more than 2 times (like 4 b's or 3 b's)
+4. ❌ Having consecutive same answers more than once
+5. ❌ Not using one of the 6 APPROVED patterns
+
+✅ HOW TO AVOID MISTAKES:
+1. Choose your pattern FIRST from the 6 APPROVED patterns
+2. Write it down: "I will use Pattern X: a), b), c), a), b)"
+3. Count the distribution: "This gives me 2a + 2b + 1c ✓"
+4. Create questions matching this pattern
+5. Double-check your final answers match the pattern
+
+STEP-BY-STEP PROCESS FOR EACH CONVERSATION:
+
+STEP 1: Choose your answer pattern from these APPROVED patterns (ROTATE between conversations):
+  → Pattern 1: a), b), c), a), b) (2a, 2b, 1c)
+  → Pattern 2: c), a), b), c), b) (1a, 2b, 2c)
+  → Pattern 3: b), c), a), b), c) (1a, 2b, 2c)
+  → Pattern 4: a), c), b), a), c) (2a, 1b, 2c)
+  → Pattern 5: c), b), a), c), a) (2a, 1b, 2c)
+  → Pattern 6: b), a), c), b), a) (2a, 2b, 1c)
+
+IMPORTANT: DO NOT use the same pattern for consecutive conversations!
+ROTATION applies within each topic (every 10 conversations):
+
+Within any topic (e.g., Conversations 1-10, or 11-20, or 21-30, etc.):
+- 1st conversation in topic: Use Pattern 1
+- 2nd conversation in topic: Use Pattern 2
+- 3rd conversation in topic: Use Pattern 3
+- 4th conversation in topic: Use Pattern 4
+- 5th conversation in topic: Use Pattern 5
+- 6th conversation in topic: Use Pattern 6
+- 7th conversation in topic: Use Pattern 1 (repeat cycle)
+- 8th conversation in topic: Use Pattern 2
+- 9th conversation in topic: Use Pattern 3
+- 10th conversation in topic: Use Pattern 4
+
+STEP 2: Write down your pattern before creating questions (example: "Conversation 2, I will use Pattern 2: c), a), b), c), b)")
+
+STEP 3: Create questions and place correct answers according to your pattern:
+  - Question 1: Put CORRECT info in position c)
+  - Question 2: Put CORRECT info in position a)
+  - Question 3: Put CORRECT info in position b)
+  - Question 4: Put CORRECT info in position c)
+  - Question 5: Put CORRECT info in position b)
+
+STEP 4: VERIFY before moving to next conversation:
+  ✓ Count total answers: Must be EXACTLY 5 answers
+  ✓ Count a's: Must be 1 or 2 (NEVER 0, NEVER 3+)
+  ✓ Count b's: Must be 1 or 2 (NEVER 0, NEVER 3+)  ← CRITICAL: Not 3, not 4!
+  ✓ Count c's: Must be 1 or 2 (NEVER 0, NEVER 3+)
+  ✓ Verify: a count + b count + c count = 5
+  ✓ Check pattern matches one of the 6 APPROVED patterns
+
+⚠️ IF YOU HAVE 3 OR MORE b) ANSWERS → REJECTED! Choose different pattern!
+⚠️ IF YOU HAVE 0 c) ANSWERS → REJECTED! Must include c)!
+⚠️ IF YOUR ANSWERS FAIL ANY CHECK ABOVE → FIX IMMEDIATELY!
+
+🔴🔴🔴 CRITICAL PRE-GENERATION CHECKLIST 🔴🔴🔴
+
+Before you start generating, read these rules ONE MORE TIME:
+
+1. ✅ Each conversation MUST use ALL 3 answer options (a, b, AND c)
+2. ✅ NO answer can appear MORE than 2 times (max 2 a's, max 2 b's, max 2 c's)
+3. ✅ NO answer can appear LESS than 1 time (min 1 a, min 1 b, min 1 c)
+4. ✅ If you have 3 or 4 b) answers → WRONG! Use approved pattern!
+5. ✅ ROTATE patterns - DO NOT use the same pattern twice in a row
+6. ✅ Use ONLY the 6 APPROVED patterns in rotation (applies to position within each topic):
+   - 1st & 7th conversation in topic: Pattern 1 (a, b, c, a, b)
+   - 2nd & 8th conversation in topic: Pattern 2 (c, a, b, c, b)
+   - 3rd & 9th conversation in topic: Pattern 3 (b, c, a, b, c)
+   - 4th & 10th conversation in topic: Pattern 4 (a, c, b, a, c)
+   - 5th conversation in topic: Pattern 5 (c, b, a, c, a)
+   - 6th conversation in topic: Pattern 6 (b, a, c, b, a)
+   
+   Examples:
+   - Conversations 1, 7, 11, 17, 21, 27, 31, 37, 41, 47: Pattern 1
+   - Conversations 2, 8, 12, 18, 22, 28, 32, 38, 42, 48: Pattern 2
+   - Conversations 3, 9, 13, 19, 23, 29, 33, 39, 43, 49: Pattern 3
+   - Conversations 4, 10, 14, 20, 24, 30, 34, 40, 44, 50: Pattern 4
+   - Conversations 5, 15, 25, 35, 45: Pattern 5
+   - Conversations 6, 16, 26, 36, 46: Pattern 6
+5. ❌ DO NOT create patterns like: b)b)b)b)a), a)b)b)b)b), b)b)c)b)b) - these are WRONG!
+
+VERIFICATION STEPS FOR EACH CONVERSATION (CHECK BEFORE FINISHING):
+□ Count questions → MUST BE EXACTLY 5 (not 4, not 6!)
+□ Count answers → MUST BE EXACTLY 5 (matching the 5 questions)
+□ Each question has 3 options (a, b, c) → REQUIRED!
+□ Count a's → MUST be 1 or 2 (not 0, not 3, not 4!)
+□ Count b's → MUST be 1 or 2 (not 0, not 3, not 4!) ← AVOID TOO MANY b's!
+□ Count c's → MUST be 1 or 2 (not 0, not 3, not 4!)
+□ Verify: ALL 3 options (a, b, c) are present
+□ Verify: a + b + c = 5 total answers
+□ Verify: Pattern matches ONE of the 6 APPROVED patterns
+□ Verify: NO option appears 3 or more times
+
+🚫 INSTANT REJECTION if:
+❌ 3 or more b) answers (like b,b,b,a,b or a,b,b,b,b)
+❌ 0 c) answers (like b,a,b,a,b)
+❌ Any option appears more than 2 times
+
+🚫 AUTOMATIC REJECTION RULES:
+❌ Patterns with 3+ b's: b)b)b)b)a), a)b)b)b)b), b)b)c)b)b) → REJECTED!
+❌ Patterns with 3+ a's: a)a)a)b)c), a)a)b)a)c) → REJECTED!
+❌ Patterns with 3+ c's: c)c)c)a)b), c)a)c)c)b) → REJECTED!
+❌ Patterns missing any option: b)a)b)a)b) (no c) → REJECTED!
+❌ Any pattern NOT in the 6 APPROVED list → REJECTED!
+
+⚠️ SPECIAL WARNING: TOO MANY b) ANSWERS IS THE MOST COMMON ERROR!
+Always double-check your b) count before finishing each conversation!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔴 FINAL WARNING: AVOID TOO MANY b) ANSWERS! 🔴
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ MOST COMMON ERROR: Using too many b) answers!
+
+❌ WRONG EXAMPLES (too many b's):
+   b), b), b), b), a) → Has FOUR b's! REJECTED!
+   a), b), b), b), b) → Has FOUR b's! REJECTED!
+   b), b), c), b), b) → Has FOUR b's! REJECTED!
+   a), a), b), b), b) → Has THREE b's! REJECTED!
+   b), a), b), a), b) → Has THREE b's + no c! REJECTED!
+
+✅ CORRECT EXAMPLES (balanced distribution):
+   a), b), c), a), b) → Has 2a, 2b, 1c ✓ APPROVED
+   c), a), b), c), b) → Has 1a, 2b, 2c ✓ APPROVED
+   a), c), b), a), c) → Has 2a, 1b, 2c ✓ APPROVED
+
+The system will AUTOMATICALLY CHECK each conversation for:
+✓ Each answer (a, b, c) appears MINIMUM 1 time
+✓ Each answer (a, b, c) appears MAXIMUM 2 times
+✓ All three options (a, b, c) are present
+✓ Pattern matches one of the 6 APPROVED patterns
+✓ Pattern rotation is followed
+
+If you violate these rules, the conversation will be REJECTED and you will need to regenerate it!
+
+PATTERN ROTATION REMINDER (Within each topic):
+1st in topic→Pattern 1 (a,b,c,a,b) | 2nd in topic→Pattern 2 (c,a,b,c,b) | 3rd in topic→Pattern 3 (b,c,a,b,c)
+4th in topic→Pattern 4 (a,c,b,a,c) | 5th in topic→Pattern 5 (c,b,a,c,a) | 6th in topic→Pattern 6 (b,a,c,b,a)
+Then repeat: 7th→Pattern 1, 8th→Pattern 2, 9th→Pattern 3, 10th→Pattern 4
+
+Examples: Conv 1, 11, 21, 31, 41→Pattern 1 | Conv 2, 12, 22, 32, 42→Pattern 2
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 BEFORE YOU START GENERATING - READ THIS CHECKLIST:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+☑️ I will generate EXACTLY {CONVERSATIONS_PER_TOPIC} conversations for the current topic
+☑️ I will start with the +Topic section
+☑️ I will number conversations correctly based on the current topic (1-10, 11-20, etc.)
+☑️ I will rotate answer patterns to ensure diversity
+☑️ I will give EVERY conversation EXACTLY 5 questions (not 4, not 6!)
+☑️ I will count questions before writing answers: 1, 2, 3, 4, 5 ✓
+☑️ I will NOT stop early - I will complete all {CONVERSATIONS_PER_TOPIC} conversations for this topic
+
+🎯 ANSWER DISTRIBUTION CHECKLIST (FOR EACH CONVERSATION):
+☑️ I will use ONE of the 6 APPROVED patterns
+☑️ I will ensure a) appears 1-2 times (never 0, never 3+)
+☑️ I will ensure b) appears 1-2 times (never 0, never 3+) ← AVOID TOO MANY b's!
+☑️ I will ensure c) appears 1-2 times (never 0, never 3+)
+☑️ I will verify: a count + b count + c count = 5
+☑️ I will double-check NO option appears more than 2 times
+
+🔢 COUNTING GUIDE PER TOPIC:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 1 - Topic: Daily Life & Greetings (Conversations 1-10)
+Conversation 1 ✓ Conversation 2 ✓ Conversation 3 ✓ Conversation 4 ✓ Conversation 5 ✓
+Conversation 6 ✓ Conversation 7 ✓ Conversation 8 ✓ Conversation 9 ✓ Conversation 10 ✓
+
+PART 2 - Topic: Food & Social Situations (Conversations 11-20)
+Conversation 11 ✓ Conversation 12 ✓ Conversation 13 ✓ Conversation 14 ✓ Conversation 15 ✓
+Conversation 16 ✓ Conversation 17 ✓ Conversation 18 ✓ Conversation 19 ✓ Conversation 20 ✓
+
+PART 3 - Topic: Work & Study (Conversations 21-30)
+Conversation 21 ✓ Conversation 22 ✓ Conversation 23 ✓ Conversation 24 ✓ Conversation 25 ✓
+Conversation 26 ✓ Conversation 27 ✓ Conversation 28 ✓ Conversation 29 ✓ Conversation 30 ✓
+
+PART 4 - Topic: Health & Daily Habits (Conversations 31-40)
+Conversation 31 ✓ Conversation 32 ✓ Conversation 33 ✓ Conversation 34 ✓ Conversation 35 ✓
+Conversation 36 ✓ Conversation 37 ✓ Conversation 38 ✓ Conversation 39 ✓ Conversation 40 ✓
+
+PART 5 - Topic: Shopping & Money (Conversations 41-50)
+Conversation 41 ✓ Conversation 42 ✓ Conversation 43 ✓ Conversation 44 ✓ Conversation 45 ✓
+Conversation 46 ✓ Conversation 47 ✓ Conversation 48 ✓ Conversation 49 ✓ Conversation 50 ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ NOTE: Each part is generated SEPARATELY to avoid overly long outputs
+⚠️ This generation will produce ONE complete topic with {CONVERSATIONS_PER_TOPIC} conversations
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NOW BEGIN GENERATING THE CURRENT TOPIC!
+
+Each generation follows this pattern:
+1. Start with: +Topic [Topic Name]
+2. Generate conversations numbered appropriately for that topic
+3. Complete all {CONVERSATIONS_PER_TOPIC} conversations for the topic
+
+🎯 KEY SUCCESS FACTORS:
+1. Generate COMPLETE {CONVERSATIONS_PER_TOPIC} conversations for the current topic
+2. EVERY conversation MUST have EXACTLY 5 questions (count them!)
+3. ROTATE answer patterns for diversity (following the pattern rotation schedule)
+4. Follow the exact format for each conversation
+5. Keep conversation numbers sequential for the topic (e.g., 1-10, 11-20, etc.)
+
+🚨 QUESTION COUNT VERIFICATION:
+Before moving from +Questions to +Answers in EACH conversation:
+→ Count: ¿Question 1? ✓
+→ Count: ¿Question 2? ✓
+→ Count: ¿Question 3? ✓
+→ Count: ¿Question 4? ✓
+→ Count: ¿Question 5? ✓
+→ Total = 5 questions ✓ → NOW you can write +Answers!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔴 FINAL CRITICAL REMINDER BEFORE YOU START:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This generation requires EXACTLY {CONVERSATIONS_PER_TOPIC} CONVERSATIONS for the current topic.
+
+Your output structure for EACH PART should be:
+
++Topic [Topic Name]
+
+Conversation [X]: [Title in Spanish]
++Introduction
++Vocabulary
++[Title in Spanish]
+[Dialogue]
++[Title in English]
+[Translation]
++Questions
+[5 questions]
++Answers
+[5 answers]
+
+... continue for {CONVERSATIONS_PER_TOPIC} conversations ...
+
+Conversation [X+9]: [Title in Spanish]
++Introduction
++Vocabulary
++[Title in Spanish]
+[Dialogue]
++[Title in English]
+[Translation]
++Questions
+[5 questions]
++Answers
+[5 answers]
+
+⚠️ GENERATION PARTS:
+- PART 1 (Topic 1): Conversations 1→10 (10 conversations)
+- PART 2 (Topic 2): Conversations 11→20 (10 conversations)
+- PART 3 (Topic 3): Conversations 21→30 (10 conversations)
+- PART 4 (Topic 4): Conversations 31→40 (10 conversations)
+- PART 5 (Topic 5): Conversations 41→50 (10 conversations)
+
+⚠️ DO NOT STOP early - complete all {CONVERSATIONS_PER_TOPIC} conversations for the current topic!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 5 QUESTIONS MANDATORY REQUIREMENT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ EVERY SINGLE CONVERSATION MUST HAVE EXACTLY 5 QUESTIONS!
+
+✅ CORRECT: 5 questions with 3 options each = 5 answers
+❌ WRONG: 4 questions (MISSING 1 question!)
+❌ WRONG: 6 questions (TOO MANY!)
+❌ WRONG: Questions with only 2 options
+
+BEFORE FINISHING EACH CONVERSATION:
+1. Count your questions: 1, 2, 3, 4, 5 ✓
+2. Count your answers: 1, 2, 3, 4, 5 ✓
+3. If you have 4 questions → ADD ONE MORE!
+4. If you have 6 questions → REMOVE ONE!
+
+This is a CRITICAL requirement - conversations with wrong number of questions will be REJECTED!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚫 STRICT OUTPUT FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ DO OUTPUT (in this EXACT order, ONCE per conversation):
+- +Topic (once per group of 10 conversations)
+- Conversation [number]: [Title]
+- +Introduction (ONCE only)
+- +Vocabulary (ONCE only)
+- +[Conversation title in target language] (ONCE only) ← MUST have + prefix!
+- [Dialogue in target language]
+- +[Conversation title in translation language] (ONCE only) ← MUST have + prefix!
+- [Dialogue in translation language]
+- +Questions (ONCE only)
+- +Answers (ONCE only)
+
+🚨 CRITICAL FORMAT EXAMPLES:
+✅ CORRECT: +Saludos por la mañana
+✅ CORRECT: +Morning Greetings
+❌ WRONG: Saludos por la mañana (missing + symbol)
+❌ WRONG: Morning Greetings (missing + symbol)
+
+❌ DO NOT OUTPUT:
+- Progress notes (e.g., "Conversation 1 complete")
+- Comments (e.g., "Moving to next topic")
+- Separators (e.g., "---", "===")
+- Metadata (e.g., "15/50 conversations done")
+- Any extra text not specified in the format
+- Duplicate sections (e.g., writing +Introduction twice, +Vocabulary twice)
+
+🚨 CRITICAL: Each section should appear EXACTLY ONCE per conversation!
+If you write +Introduction, do NOT write it again until the next conversation!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 MOST COMMON FORMATTING ERROR: MISSING + SYMBOL ON CONVERSATION TITLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ CONVERSATION TITLES MUST START WITH + SYMBOL!
+
+✅ CORRECT FORMAT:
++Vocabulary
+hola → /ˈo.la/ → oh-la → hello
+buenos días → /ˈbwe.nos ˈdi.as/ → bweh-nos dee-ahs → good morning
+
++Saludos por la mañana ← MUST have + symbol!
+Ana: ¡Hola, Carlos!
+Carlos: ¡Buenos días, Ana!
+
++Morning Greetings ← MUST have + symbol!
+Ana: Hi, Carlos!
+Carlos: Good morning, Ana!
+
+❌ WRONG FORMAT (WILL CAUSE PARSING ERROR):
++Vocabulary
+hola → /ˈo.la/ → oh-la → hello
+
+Saludos por la mañana ← ERROR: Missing + symbol!
+Ana: ¡Hola, Carlos!
+
+Morning Greetings ← ERROR: Missing + symbol!
+Ana: Hi, Carlos!
+
+🔴 CRITICAL RULE: After +Vocabulary section, the NEXT line MUST be the conversation title with + symbol!
+Format: +[Title in Target Language]
+Then dialogue lines: Speaker: Text
+Then: +[Title in Translation Language]
+Then translated dialogue lines: Speaker: Text
+
+🚨 FINAL REMINDER BEFORE GENERATION:
+- EVERY conversation needs EXACTLY 5 questions
+- Count them: Question 1, Question 2, Question 3, Question 4, Question 5 ✓
+- Then write EXACTLY 5 answers: Answer 1, Answer 2, Answer 3, Answer 4, Answer 5 ✓
+- If you only write 4 questions, the conversation is INCOMPLETE and REJECTED!
+
+🎯 ANSWER DISTRIBUTION REMINDER (CRITICAL!):
+Each conversation MUST follow ONE of these 3 distributions:
+  📊 Distribution 1: 2 answers are a), 2 answers are b), 1 answer is c)
+  📊 Distribution 2: 1 answer is a), 2 answers are b), 2 answers are c)
+  📊 Distribution 3: 2 answers are a), 1 answer is b), 2 answers are c)
+
+⚠️ NEVER have more than 2 of any answer! (Not 3 b's, not 4 b's!)
+⚠️ ALWAYS include all 3 options! (Must have a), b), AND c)!)
+
+BEGIN NOW! Generate {CONVERSATIONS_PER_TOPIC} conversations for the current topic following the EXACT format!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 WHICH TOPIC TO GENERATE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The system will specify which topic/part to generate. Generate that specific topic only:
+
+PART 1: Topic 1 - Daily Life & Greetings (Conversations 1-10)
+PART 2: Topic 2 - Food & Social Situations (Conversations 11-20)
+PART 3: Topic 3 - Work & Study (Conversations 21-30)
+PART 4: Topic 4 - Health & Daily Habits (Conversations 31-40)
+PART 5: Topic 5 - Shopping & Money (Conversations 41-50)
+
+Each generation is independent and produces exactly {CONVERSATIONS_PER_TOPIC} complete conversations.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📖 HOW TO USE THIS PROMPT (MULTI-PART GENERATION):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+To generate all 50 conversations, make 5 separate requests:
+
+REQUEST 1: "Generate PART 1: Topic 1 - Daily Life & Greetings (Conversations 1-10)"
+REQUEST 2: "Generate PART 2: Topic 2 - Food & Social Situations (Conversations 11-20)"
+REQUEST 3: "Generate PART 3: Topic 3 - Work & Study (Conversations 21-30)"
+REQUEST 4: "Generate PART 4: Topic 4 - Health & Daily Habits (Conversations 31-40)"
+REQUEST 5: "Generate PART 5: Topic 5 - Shopping & Money (Conversations 41-50)"
+
+Each request will produce 10 complete conversations following all the formatting rules.
+This approach prevents output length issues while maintaining quality and consistency.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

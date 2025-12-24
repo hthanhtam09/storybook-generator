@@ -15,11 +15,9 @@ import {
   Loader2,
   MessageCircle,
   BookOpen,
-  Image,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { ConversationsConfig, TemplateFile } from "@/lib/types";
-import type { ConversationImageFile } from "@/components/conversations-images";
 import type { ConversationMetadata } from "@/components/conversations-metadata";
 import { Separator } from "@/components/ui/separator";
 import { processConversationsTemplate } from "@/lib/conversations-template-processor";
@@ -27,17 +25,17 @@ import { processConversationsTemplate } from "@/lib/conversations-template-proce
 interface ConversationsPreviewProps {
   config: ConversationsConfig;
   metadata: ConversationMetadata;
-  images?: ConversationImageFile[];
   template: TemplateFile | null;
   onExportSuccess?: () => void;
+  hasValidationErrors?: boolean;
 }
 
 export function ConversationsPreview({
   config,
   metadata,
-  images = [],
   template,
   onExportSuccess,
+  hasValidationErrors = false,
 }: ConversationsPreviewProps) {
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
@@ -67,8 +65,7 @@ export function ConversationsPreview({
       const blob = await processConversationsTemplate(
         template,
         config,
-        metadata,
-        images
+        metadata
       );
 
       const filename = `${(config.title || "conversations").replace(
@@ -132,7 +129,11 @@ export function ConversationsPreview({
           </div>
           <Button
             onClick={handleExportDOCX}
-            disabled={isExporting || config.lessons.length === 0}
+            disabled={
+              isExporting ||
+              config.lessons.length === 0 ||
+              hasValidationErrors
+            }
             size="lg"
           >
             {isExporting ? (
@@ -147,6 +148,11 @@ export function ConversationsPreview({
               </>
             )}
           </Button>
+          {hasValidationErrors && config.lessons.length > 0 && (
+            <p className="text-xs text-destructive mt-2">
+              Please fix all validation errors before exporting
+            </p>
+          )}
         </div>
       </div>
 
@@ -205,21 +211,6 @@ export function ConversationsPreview({
                   <p className="text-2xl font-bold">{getTotalDialogues()}</p>
                 </div>
               </div>
-
-              {images.length > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Images</p>
-                    <div className="flex items-center gap-2">
-                      <Image className="h-4 w-4 text-muted-foreground" />
-                      <p className="font-medium">
-                        {images.length} / {config.lessons.length} uploaded
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
             </CardContent>
           </Card>
 

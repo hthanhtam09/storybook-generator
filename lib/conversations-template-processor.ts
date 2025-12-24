@@ -18,7 +18,6 @@ import type {
   TemplateFile,
 } from "./types";
 import type { ConversationMetadata } from "@/components/conversations-metadata";
-import type { ConversationImageFile } from "@/components/conversations-images";
 import { parseDocxStyles, resolveDefaults } from "./docx-style-reader";
 
 // Spacing constants
@@ -584,13 +583,11 @@ function createTextRunsWithBoldVocabulary(
 export async function processConversationsTemplate(
   template: TemplateFile,
   config: ConversationsConfig,
-  metadata: ConversationMetadata,
-  images: ConversationImageFile[] = []
+  metadata: ConversationMetadata
 ): Promise<Blob> {
   const doc = await generateConversationsDocument(
     config,
     metadata,
-    images,
     template
   );
   return await Packer.toBlob(doc);
@@ -599,7 +596,6 @@ export async function processConversationsTemplate(
 async function generateConversationsDocument(
   config: ConversationsConfig,
   metadata: ConversationMetadata,
-  images: ConversationImageFile[] = [],
   template?: TemplateFile
 ): Promise<Document> {
   // Read defaults from template styles if available
@@ -898,35 +894,6 @@ async function generateConversationsDocument(
         spacing: { after: SPACING.LARGE },
       })
     );
-
-    // Lesson image (check by lesson number, not id)
-    const image = images.find((img) => img.lessonNumber === lessonIndex + 1);
-    if (image && image.file) {
-      try {
-        const imageBuffer = await image.file.arrayBuffer();
-        contentChildren.push(
-          createParagraph({
-            children: [
-              new ImageRun({
-                data: imageBuffer as any,
-                transformation: {
-                  width: Math.round(96 * 4.5),
-                  height: Math.round(96 * 4.5),
-                },
-              } as any),
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { before: SPACING.LARGE, after: SPACING.LARGE },
-          }),
-          createParagraph({ children: [new PageBreak()] })
-        );
-      } catch (error) {
-        console.error(
-          `Failed to add image for lesson ${lessonIndex + 1}:`,
-          error
-        );
-      }
-    }
 
     // Introduction (size 32 = 16pt, no heading, NO + sign, NO page break)
     if (lesson.introduction) {

@@ -9,7 +9,11 @@ import type { ConversationLesson } from "@/lib/types";
 
 interface ConversationsInputProps {
   initialValue?: string;
-  onLessonsChange?: (lessons: ConversationLesson[], inputText: string) => void;
+  onLessonsChange?: (
+    lessons: ConversationLesson[],
+    inputText: string,
+    hasErrors: boolean
+  ) => void;
 }
 
 interface ValidationError {
@@ -31,7 +35,6 @@ const parseLessons = (text: string): ParseResult => {
   let currentLesson: Partial<ConversationLesson> | null = null;
   let currentSection:
     | "intro"
-    | "prompt"
     | "vocab"
     | "conversation"
     | "conversationTranslated"
@@ -66,7 +69,6 @@ const parseLessons = (text: string): ParseResult => {
             title: currentLesson.title || "",
             titleTranslated: currentLesson.titleTranslated || "",
             introduction: currentLesson.introduction || "",
-            imagePrompt: currentLesson.imagePrompt || "",
             vocabulary: currentLesson.vocabulary || [],
             conversation: currentLesson.conversation || [],
             conversationTranslated: currentLesson.conversationTranslated || [],
@@ -84,7 +86,6 @@ const parseLessons = (text: string): ParseResult => {
         title: title,
         titleTranslated: "",
         introduction: "",
-        imagePrompt: "",
         vocabulary: [],
         conversation: [],
         conversationTranslated: [],
@@ -98,21 +99,38 @@ const parseLessons = (text: string): ParseResult => {
     }
 
     // Check for conversation title with + prefix (original language)
-    // Format: "+Title Text" or "Title Text"
+    // After vocabulary section, next line with + (not a section header) is the conversation title
     if (
       currentSection === "vocab" &&
       currentLesson &&
-      !currentLesson.conversation?.length
+      currentLesson.vocabulary &&
+      currentLesson.vocabulary.length > 0
     ) {
-      // After vocabulary section, next non-header line with + could be conversation title
       const titleMatch = line.match(/^\+(.+)$/);
       if (
         titleMatch &&
         !line.match(
-          /^\+\s*(Topic|Introduction|Image\s*Prompt|Illustration|Vocabulary|Vocabulario|Conversation|Questions|Answers)/i
+          /^\+\s*(Topic|Introduction|Vocabulary|Vocabulario|Conversation|Questions?|Answers?):?\s*$/i
         )
       ) {
         currentLesson.title = titleMatch[1].trim();
+        currentSection = "conversation";
+        continue;
+      }
+
+      // Detect potential missing + prefix (line looks like a title but has no +)
+      if (
+        !line.startsWith("+") && // Does NOT start with +
+        !line.includes("→") && // Not a vocabulary line
+        !line.match(/^[a-z]/) && // Starts with capital letter
+        line.length > 5 &&
+        line.length < 80 &&
+        !line.includes(":") && // Not dialogue
+        !line.match(/^\d/) && // Not numbered
+        currentLesson.vocabulary.length > 5 // Has sufficient vocabulary
+      ) {
+        // Parse it as title anyway (without +) to continue parsing dialogue
+        currentLesson.title = line.trim();
         currentSection = "conversation";
         continue;
       }
@@ -130,10 +148,25 @@ const parseLessons = (text: string): ParseResult => {
       if (
         titleMatch &&
         !line.match(
-          /^\+\s*(Topic|Introduction|Image\s*Prompt|Illustration|Vocabulary|Vocabulario|Conversation|Questions|Answers)/i
+          /^\+\s*(Topic|Introduction|Vocabulary|Vocabulario|Conversation|Questions?|Answers?):?\s*$/i
         )
       ) {
         currentLesson.titleTranslated = titleMatch[1].trim();
+        currentSection = "conversationTranslated";
+        continue;
+      }
+
+      // Detect potential missing + prefix for translated title
+      if (
+        !line.startsWith("+") && // Does NOT start with +
+        !line.includes(":") && // Not dialogue
+        !line.match(/^[a-z]/) && // Starts with capital letter
+        line.length > 5 &&
+        line.length < 80 &&
+        currentLesson.conversation.length > 5 // Has sufficient dialogue
+      ) {
+        // Parse it as title anyway (without +) to continue parsing dialogue
+        currentLesson.titleTranslated = line.trim();
         currentSection = "conversationTranslated";
         continue;
       }
@@ -146,14 +179,6 @@ const parseLessons = (text: string): ParseResult => {
     }
     if (line.match(/^\+\s*Introduction:?$/i)) {
       currentSection = "intro";
-      continue;
-    }
-    if (
-      line.match(/^\+\s*Image\s*Prompt:?$/i) ||
-      line.match(/^\+\s*Illustration:?$/i)
-    ) {
-      console.log(`Found Image Prompt section header: "${line}"`);
-      currentSection = "prompt";
       continue;
     }
     if (
@@ -190,11 +215,6 @@ const parseLessons = (text: string): ParseResult => {
         currentLesson.introduction = currentLesson.introduction
           ? currentLesson.introduction + "\n" + line
           : line;
-      } else if (currentSection === "prompt") {
-        currentLesson.imagePrompt = currentLesson.imagePrompt
-          ? currentLesson.imagePrompt + "\n" + line
-          : line;
-        console.log(`Parsing image prompt: "${line}"`);
       } else if (currentSection === "vocab") {
         // Parse vocabulary: word → /ipa/ → pronunciation → translation
         const parts = line.split("→").map((p) => p.trim());
@@ -339,7 +359,6 @@ const parseLessons = (text: string): ParseResult => {
         title: currentLesson.title || "",
         titleTranslated: currentLesson.titleTranslated || "",
         introduction: currentLesson.introduction || "",
-        imagePrompt: currentLesson.imagePrompt || "",
         vocabulary: currentLesson.vocabulary || [],
         conversation: currentLesson.conversation || [],
         conversationTranslated: currentLesson.conversationTranslated || [],
@@ -371,21 +390,23 @@ export function ConversationsInput({
       setLessons([]);
       setErrors([]);
       setIsValid(false);
+      if (onLessonsChange) {
+        onLessonsChange([], input, false);
+      }
       return;
     }
 
     const timer = setTimeout(() => {
       const parseResult = parseLessons(input);
+      const hasErrors =
+        parseResult.errors.filter((e) => e.severity === "error").length > 0;
 
       setLessons(parseResult.lessons);
       setErrors(parseResult.errors);
-      setIsValid(
-        parseResult.lessons.length > 0 &&
-          parseResult.errors.filter((e) => e.severity === "error").length === 0
-      );
+      setIsValid(parseResult.lessons.length > 0 && !hasErrors);
 
       if (onLessonsChange) {
-        onLessonsChange(parseResult.lessons, input);
+        onLessonsChange(parseResult.lessons, input, hasErrors);
       }
     }, 500);
 
@@ -414,7 +435,7 @@ export function ConversationsInput({
             Conversations Input
           </h3>
           <p className="text-xs text-muted-foreground">
-            Paste your structured conversation data here
+            Paste your conversation data (single topic or full book)
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -460,7 +481,7 @@ export function ConversationsInput({
               </AlertDescription>
             </Alert>
           )}
-          <div className="max-h-32 space-y-1 overflow-auto rounded-md border border-border bg-card p-3">
+          <div className="max-h-40 space-y-1 overflow-auto rounded-md border border-border bg-card p-3">
             {errors.map((error, index) => (
               <div key={index} className="flex items-start gap-2 text-xs">
                 <AlertCircle
@@ -497,9 +518,6 @@ Daily Life & Greetings
 
 +Introduction
 John and Mary meet at a coffee shop. They haven't seen each other for a long time and catch up on their lives.
-
-+Image Prompt
-A warm and inviting coffee shop interior with two friends sitting at a small table near a window. Sunlight streams through, creating a cozy atmosphere. The characters are smiling and engaged in conversation, with coffee cups on the table.
 
 +Vocabulary
 catch up → /kætʃ ʌp/ → katch uhp → to reconnect

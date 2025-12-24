@@ -311,7 +311,6 @@ export interface ConversationLesson {
   title: string;
   titleTranslated?: string;
   introduction: string;
-  imagePrompt: string;
   vocabulary: ConversationVocabulary[];
   conversation: ConversationEntry[];
   conversationTranslated?: ConversationEntry[];
