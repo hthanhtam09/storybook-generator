@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { ConversationsPanel } from "@/components/conversations-panel";
 import { ConversationsPreview } from "@/components/conversations-preview";
@@ -30,7 +30,7 @@ export default function ConversationsPage() {
     title: "",
     author: "",
     publisher: "",
-    copyrightYear: new Date().getFullYear(),
+    copyrightYear: 2024,
     publicationLocation: "",
     language: "en",
     introduction: "",
@@ -39,6 +39,14 @@ export default function ConversationsPage() {
     description: "",
     fullPageImage: undefined,
   });
+
+  // Set the current year on client side only to avoid hydration mismatch
+  useEffect(() => {
+    setMetadata((prev) => ({
+      ...prev,
+      copyrightYear: new Date().getFullYear(),
+    }));
+  }, []);
 
   const handleLessonsChange = (lessons: ConversationLesson[]) => {
     setConfig((prev) => ({

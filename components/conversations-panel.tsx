@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConversationsInput } from "@/components/conversations-input";
-import { ConversationsMetadata } from "@/components/conversations-metadata";
 import {
   ConversationsMetadataForm,
   type ConversationMetadata,
@@ -24,7 +23,7 @@ export function ConversationsPanel({
     title: "",
     author: "",
     publisher: "",
-    copyrightYear: new Date().getFullYear(),
+    copyrightYear: 2024,
     publicationLocation: "",
     language: "en",
     introduction: "",
@@ -34,6 +33,14 @@ export function ConversationsPanel({
     fullPageImage: undefined,
   });
   const [lessonsInput, setLessonsInput] = useState("");
+
+  // Set the current year on client side only to avoid hydration mismatch
+  useEffect(() => {
+    setMetadata((prev) => ({
+      ...prev,
+      copyrightYear: new Date().getFullYear(),
+    }));
+  }, []);
 
   const handleLessonsChange = (
     newLessons: ConversationLesson[],
