@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -380,6 +380,12 @@ export function ConversationsInput({
   const [lessons, setLessons] = useState<ConversationLesson[]>([]);
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [isValid, setIsValid] = useState(false);
+  
+  // Use ref to store the latest callback to avoid infinite loop
+  const onLessonsChangeRef = useRef(onLessonsChange);
+  useEffect(() => {
+    onLessonsChangeRef.current = onLessonsChange;
+  });
 
   useEffect(() => {
     setInput(initialValue);
@@ -390,8 +396,8 @@ export function ConversationsInput({
       setLessons([]);
       setErrors([]);
       setIsValid(false);
-      if (onLessonsChange) {
-        onLessonsChange([], input, false);
+      if (onLessonsChangeRef.current) {
+        onLessonsChangeRef.current([], input, false);
       }
       return;
     }
@@ -405,13 +411,13 @@ export function ConversationsInput({
       setErrors(parseResult.errors);
       setIsValid(parseResult.lessons.length > 0 && !hasErrors);
 
-      if (onLessonsChange) {
-        onLessonsChange(parseResult.lessons, input, hasErrors);
+      if (onLessonsChangeRef.current) {
+        onLessonsChangeRef.current(parseResult.lessons, input, hasErrors);
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [input, onLessonsChange]);
+  }, [input]);
 
   const errorCount = errors.filter((e) => e.severity === "error").length;
 

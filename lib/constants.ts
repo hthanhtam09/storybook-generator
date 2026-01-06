@@ -11,4 +11,5 @@ export const SUPPORTED_LANGUAGES = [
   { code: "vi", name: "Vietnamese" },
 ] as const
 
-export const CURRENT_YEAR = new Date().getFullYear()
+// Using a static value to avoid hydration mismatch between server and client
+export const CURRENT_YEAR = 2026
